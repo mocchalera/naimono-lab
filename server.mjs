@@ -9,7 +9,7 @@ import './public/core.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 try { loadEnvFile(join(ROOT, '.env')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-const STATIC = new Map([['/','index.html'], ['/index.html','index.html'], ['/style.css','style.css'], ['/core.js','core.js'], ['/app.js','app.js'], ['/favicon.svg','favicon.svg']]);
+const STATIC = new Map([['/','index.html'], ['/index.html','index.html'], ['/style.css','style.css'], ['/core.js','core.js'], ['/word-visuals.js','word-visuals.js'], ['/app.js','app.js'], ['/favicon.svg','favicon.svg']]);
 const TYPES = { html:'text/html; charset=utf-8', css:'text/css; charset=utf-8', js:'text/javascript; charset=utf-8', svg:'image/svg+xml' };
 
 export function createApp({ ai = null, model = DEFAULT_MODEL } = {}) {

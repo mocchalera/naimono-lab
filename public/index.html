@@ -9,6 +9,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
   <script src="core.js" defer></script>
+  <script src="word-visuals.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -77,6 +78,7 @@
         <span><span class="brand-en">NAIMONO LAB.</span><span class="brand-jp">ナイモノ研究所</span></span>
       </a>
       <nav class="header-nav" aria-label="メニュー">
+        <button class="icon-button motion-toggle-button" id="motion-button" aria-label="動きをとめる" aria-pressed="false" title="動きをとめる"><span aria-hidden="true" id="motion-icon">⏸</span></button>
         <button class="icon-button" id="sound-button" aria-label="効果音をオンにする" aria-pressed="false"><svg class="icon"><use href="#i-mute"/></svg></button>
         <button class="notebook-button" id="gallery-button"><svg class="icon"><use href="#i-book"/></svg><span>ずかん</span><b id="collection-count">00</b></button>
         <button class="icon-button help-button" id="help-button" aria-label="あそびかた">?</button>
