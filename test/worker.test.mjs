@@ -60,3 +60,27 @@ test('demo fallback and request guards remain safe', async () => {
   assert.equal((await handleRequest(post('/api/judge',{word:'ねこ'},{Origin:'https://evil.example','CF-Connecting-IP':'worker-test-4'}), {ASSETS:assets})).status, 403);
   assert.equal((await handleRequest(post('/api/judge',{word:'<script>'},{'CF-Connecting-IP':'worker-test-5'}), {AI:{run:async () => { throw new Error('must not run'); }},ASSETS:assets})).status, 400);
 });
+
+test('Worker cache separates model settings, reserves budget before fallback and skips caching transient failures',async()=>{
+  let jevCalls=0,helperCalls=0,reservations=0,available=true;
+  const env={AI:{run:async(model)=>{
+    if(model==='typesafe/jev'){jevCalls++;return jevResponse(.5);}
+    helperCalls++;return {response:{kind:'invented',certainty:'clear',name:'',domain:'other',detail:'新しく作った音。',parts:[],issue:'none'}};
+  }},FALLBACK_BUDGET:{getByName:name=>{
+    assert.equal(name,'naimono-fallback-allowance');return {reserve:async cost=>{assert.ok(cost>0);reservations++;return available;}};
+  }}};
+  const headers={'CF-Connecting-IP':'pipeline-cache'},input={word:'ぽちゅらみ'};
+  const call=async(custom=env)=>json(await handleRequest(post('/api/judge',input,headers),custom));
+  assert.equal((await call()).decisionBy,'assistant');assert.equal((await call()).cached,true);
+  assert.deepEqual([jevCalls,helperCalls,reservations],[1,1,1]);
+  assert.equal((await call({...env,FALLBACK_ENABLED:'false'})).status,'review');
+  assert.equal((await call({...env,FALLBACK_MODEL:'@cf/google/gemma-4-26b-a4b-it'})).decisionBy,'assistant');
+  assert.deepEqual([jevCalls,helperCalls,reservations],[3,2,2]);
+  available=false;
+  const second={word:'れみょふゅ'};
+  for(let i=0;i<2;i++) {
+    const value=await json(await handleRequest(post('/api/judge',second,headers),env));
+    assert.equal(value.fallback.state,'budget');assert.equal(value.status,'review');assert.equal(value.cached,undefined);
+  }
+  assert.deepEqual([jevCalls,helperCalls,reservations],[5,2,4]);
+});

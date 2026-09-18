@@ -31,7 +31,7 @@
   ].map(Object.freeze));
   const COMPOUND_PERSPECTIVE = Object.freeze({id:'compound',label:'ことばのつぎはぎ',hint:'意味のあることばを、つないだだけ？'});
   const SENTENCE_PERSPECTIVE = Object.freeze({id:'sentence',label:'文章っぽさ',hint:'名前ではなく、文や説明になっていない？'});
-  const JUDGMENT_POLICY = Object.freeze({version:'multi-angle-v4-word-form',outAt:.85,safeAt:.20,nameCautionAt:.45,structureReviewAt:.45});
+  const JUDGMENT_POLICY = Object.freeze({version:'multi-angle-v5-assisted',outAt:.85,safeAt:.35,nameCautionAt:.30,structureReviewAt:.45});
   function unitScore(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1; }
   function assessExistence(input, nameRisk, compoundRisk, sentenceRisk) {
     if (!input || !PERSPECTIVES.every(({id}) => unitScore(input[id])) || !unitScore(nameRisk) || !unitScore(compoundRisk) || !unitScore(sentenceRisk)) throw new Error('Invalid judgment scores');

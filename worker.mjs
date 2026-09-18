@@ -1,4 +1,6 @@
-import { judgeWord, JudgeError, DEFAULT_MODEL, POLICY_VERSION } from './lib/judge.mjs';
+import { JudgeError, DEFAULT_MODEL, POLICY_VERSION } from './lib/judge.mjs';
+import {judgeGameWord} from './lib/pipeline.mjs';
+import {refereeSettings,REFEREE_VERSION} from './lib/referee.mjs';
 import './public/core.js';
 
 const MAX_BODY_BYTES = 2048;
@@ -74,13 +76,15 @@ async function judge(request, env) {
     const mode = input.mode === undefined ? 'free' : input.mode;
     if (!['free','shiritori'].includes(mode)) throw new JudgeError('あそびかたを確認してください。', 'INVALID_MODE', 400);
     if (!env.AI) return json(globalThis.NaimonoCore.demoJudge(value.word, value.reading));
-    const key = JSON.stringify([POLICY_VERSION, DEFAULT_MODEL, value.word, value.reading, mode]);
+    const fallback = refereeSettings(env);
+    const key = JSON.stringify([POLICY_VERSION, DEFAULT_MODEL, REFEREE_VERSION, fallback,Boolean(env.FALLBACK_BUDGET),value.word, value.reading, mode]);
     const now = Date.now();
     const stored = cache.get(key);
     if (stored && now - stored.at < CACHE_MS) return json({ ...stored.result, cached: true });
-    const result = await judgeWord({...value,mode}, { ai: env.AI, model: DEFAULT_MODEL });
+    const reserve = env.FALLBACK_BUDGET ? amount => env.FALLBACK_BUDGET.getByName('naimono-fallback-allowance').reserve(amount) : null;
+    const result = await judgeGameWord({...value,mode}, { ai: env.AI, model: DEFAULT_MODEL,fallback,reserve });
     if (cache.size >= 256) cache.delete(cache.keys().next().value);
-    cache.set(key, { at: now, result });
+    if (!result.fallback || result.fallback.state === 'completed') cache.set(key, { at: now, result });
     return json(result);
   } catch (error) {
     if (error instanceof JudgeError) return json({ error: error.message, code: error.code }, error.status);

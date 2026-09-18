@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "naimono-lab",
-  "main": "./worker.mjs",
+  "main": "./cloudflare.mjs",
   "compatibility_date": "2026-09-18",
   "workers_dev": true,
   "routes": [
@@ -18,5 +18,13 @@
   "ai": {
     "binding": "AI",
     "remote": true
-  }
+  },
+  "vars": {
+    "FALLBACK_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "FALLBACK_ENABLED": "true"
+  },
+  "durable_objects": {
+    "bindings": [{"name":"FALLBACK_BUDGET","class_name":"FallbackBudget"}]
+  },
+  "migrations": [{"tag":"fallback-budget-v1","new_sqlite_classes":["FallbackBudget"]}]
 }

@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { loadEnvFile } from 'node:process';
-import { judgeWord, JudgeError, DEFAULT_MODEL, POLICY_VERSION } from './lib/judge.mjs';
+import { JudgeError, DEFAULT_MODEL, POLICY_VERSION } from './lib/judge.mjs';
+import {judgeGameWord} from './lib/pipeline.mjs';
 import './public/core.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -53,7 +54,7 @@ export function createApp({ ai = null, model = DEFAULT_MODEL } = {}) {
         const key = JSON.stringify([POLICY_VERSION,model,v.word,v.reading,mode]);
         const stored = cache.get(key);
         if (stored && now - stored.at < 3600000) return json(res,200,{...stored.result,cached:true});
-        const result = await judgeWord({...v,mode},{ai,model});
+        const result = await judgeGameWord({...v,mode},{ai,model,fallback:{enabled:false}});
         if (cache.size >= 256) cache.delete(cache.keys().next().value);
         cache.set(key,{at:now,result});
         return json(res,200,result);

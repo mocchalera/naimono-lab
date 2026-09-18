@@ -111,7 +111,7 @@ test('multi-angle judgment uses the strongest recognition, never a mean or summe
 });
 test('multi-angle boundaries and ambiguous-name guard are explicit and monotonic',() => {
   const scores = Object.fromEntries(C.PERSPECTIVES.map(view => [view.id,0]));
-  for (const [score,risk,status] of [[.2,.44999,'safe'],[.20001,0,'review'],[.84999,0,'review'],[.85,0,'out'],[0,.45,'review'],[.99,1,'out']]) {
+  for (const [score,risk,status] of [[.35,.29999,'safe'],[.35001,0,'review'],[.84999,0,'review'],[.85,0,'out'],[0,.30,'review'],[.29,.4,'review'],[.99,1,'out']]) {
     assert.equal(C.assessExistence({...scores,specialist:score},risk,0,0).status,status,`${score}/${risk}`);
   }
   for (const bad of [undefined,null,'0.1',NaN,Infinity,-.1,1.01]) {
@@ -132,7 +132,7 @@ test('word-form checks guard compounds and sentences without turning familiar fr
   }
   assert.equal(C.assessExistence(low,.1,.93,.98).reason,'sentence');
   assert.equal(C.assessExistence({...low,names:.99},.1,.93,.98).reason,'recognized');
-  const mildCompound = C.assessExistence({...low,names:.3},.1,.4,.1);
+  const mildCompound = C.assessExistence({...low,names:.36},.1,.4,.1);
   assert.equal(mildCompound.reason,'possible_match'); assert.match(C.assessmentMessage(mildCompound),/バンド・人名/);
   assert.equal(C.assessExistence(low,.8,.3,.1).reason,'name_caution');
 });

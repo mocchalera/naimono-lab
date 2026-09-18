@@ -155,7 +155,7 @@ with sync_playwright() as p:
     page.close()
 
     live_setup = """() => {
-      window.mockCalls = []; window.mockStatus = 'safe'; window.mockCategory = 'animal'; window.mockSounds = null; window.mockFlavor = 'soft'; window.mockAssessment = null;
+      window.mockCalls = []; window.mockStatus = 'safe'; window.mockCategory = 'animal'; window.mockSounds = null; window.mockFlavor = 'soft'; window.mockAssessment = null; window.mockExtra = {};
       window.fetch = async (url,opts={}) => {
         if (url==='/api/config') return {ok:true,json:async()=>({judge:'jev',configured:true,model:'jev-1.13.0'})};
         window.mockCalls.push(JSON.parse(opts.body));
@@ -163,7 +163,7 @@ with sync_playwright() as p:
         const defaultScores = {exists:window.mockStatus==='safe'?0.1:window.mockStatus==='out'?0.97:0.5,everyday:.01,names:.02,culture:.03,places_products:.01,specialist:.02,variants:.01};
         const supplied = {compoundRisk:.01,sentenceRisk:.01,...(window.mockAssessment || {scores:defaultScores,nameRisk:.1})};
         const assessment = NaimonoCore.assessExistence(supplied.scores,supplied.nameRisk,supplied.compoundRisk,supplied.sentenceRisk);
-        return {ok:true,json:async()=>({status:window.mockStatus,source:'jev',probability:assessment.score,assessment,message:'テスト用Jev回答',category:window.mockCategory,sounds:window.mockSounds,flavor:window.mockFlavor})};
+        return {ok:true,json:async()=>({status:window.mockStatus,source:'jev',probability:assessment.score,assessment,message:'テスト用Jev回答',category:window.mockCategory,sounds:window.mockSounds,flavor:window.mockFlavor,...window.mockExtra})};
       };
     }"""
     live_html = HTML.replace('globalThis.NAIMONO_STANDALONE = true;','globalThis.NAIMONO_STANDALONE = false;')
@@ -370,6 +370,32 @@ with sync_playwright() as p:
         page.locator('[data-category="all"]').click()
         if width==1360: page.screenshot(path=str(OUT/'gallery-all-desktop.png'),full_page=True,animations='disabled')
         page.close()
+
+    for width in [320,390,1360]:
+        page = new_page(width=width,height=844,html=live_html,setup=live_setup)
+        page.evaluate("""window.mockStatus='out'; window.mockAssessment={scores:{exists:.29,everyday:.1,names:.2,culture:.1,places_products:.1,specialist:.1,variants:.1},nameRisk:.4}; window.mockExtra={decisionBy:'assistant',decisionReason:'recognized',fallback:{state:'completed',answer:{detail:'既存のことば・名前としての手がかり。'}},message:'助っ人が「MAN WITH A MISSION」を思い出したよ。',discussion:{level:'none'}}""")
+        start(page); answer(page,'マンウィズアミッション')
+        check(f'Assistant can resolve a low Jev score without fabricating a new score at {width}px',page.locator('.judgment-total strong').inner_text()=='29' and page.locator('.assistant-badge').is_visible() and page.locator('[data-verdict="next"]').is_visible())
+        check(f'Assistant result details stay collapsed and fit at {width}px',not page.locator('.assistant-evidence').is_visible() and page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+        if width==390: page.locator('#arena').screenshot(path=str(OUT/'assistant-mobile.png'),animations='disabled')
+        page.locator('.score-details summary').click()
+        check(f'Assistant evidence is separate from the original scores at {width}px','既存のことば・名前' in page.locator('.assistant-evidence').inner_text() and page.locator('.score-list .score-row').count()==9)
+        page.locator('[data-verdict="appeal"]').click(); page.locator('[data-verdict="safe"]').click()
+        check(f'Assisted decisions remain appealable without losing evidence at {width}px',page.locator('.manual-score-note').is_visible() and page.locator('.judgment-total strong').inner_text()=='29')
+        page.close()
+
+        for level,status in [('optional','safe'),('required','review')]:
+            page = new_page(width=width,height=844,html=live_html,setup=live_setup)
+            page.evaluate(f"window.mockStatus='{status}'; window.mockExtra={{discussion:{{level:'{level}',prompt:'新しいひびき？ ことばのつぎはぎ？'}}}}")
+            start(page); answer(page,'ぷるみょ')
+            check(f'{level} conversation renders without overflow at {width}px',page.locator(f'.discussion-box.{level}').is_visible() and page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+            if level=='optional':
+                check(f'Optional conversation permits immediate next turn at {width}px',page.locator('[data-verdict="next"]').is_visible() and page.locator('[data-verdict="safe"]').count()==0)
+                page.locator('[data-verdict="next"]').click(); check(f'Optional conversation does not block game progress at {width}px',page.locator('#input-stage').is_visible())
+            else:
+                check(f'Required discussion offers the actual vote at {width}px',page.locator('[data-verdict="safe"]').is_visible() and page.locator('[data-verdict="out"]').is_visible() and page.locator('[data-verdict="next"]').count()==0)
+                if width==390: page.locator('#arena').screenshot(path=str(OUT/'discussion-mobile.png'),animations='disabled')
+            page.close()
 
     check('No uncaught browser JavaScript errors',not errors)
     (OUT/'browser-report.json').write_text(json.dumps({'passed':len(checks),'checks':checks,'errors':errors,'notes':['Standalone HTML rendered directly, not localhost navigation.','Jev HTTP and microphone branches use explicit mocks.','Storage roundtrip uses an in-memory Storage mock.']},ensure_ascii=False,indent=2))

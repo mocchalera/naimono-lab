@@ -217,7 +217,7 @@
         await new Promise(resolve => setTimeout(resolve,350)); // Presentation only; no invented latency claims.
       } else {
         requestController = new AbortController();
-        const timeout = setTimeout(() => requestController?.abort(),11000);
+        const timeout = setTimeout(() => requestController?.abort(),13000);
         try {
           const response = await fetch('/api/judge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word:currentWord.word,reading:currentWord.reading,mode:game.mode}),signal:requestController.signal});
           const data = await response.json();
@@ -264,7 +264,7 @@
   function scoreLabel(value) {
     const score = value * 100, rounded = Math.round(score);
     // Keep rounded labels from appearing to cross the decision thresholds.
-    if ([20,45,85].includes(rounded) && score !== rounded) return `${score < rounded ? '<' : '>'}${rounded}`;
+    if ([30,35,45,85].includes(rounded) && score !== rounded) return `${score < rounded ? '<' : '>'}${rounded}`;
     return String(rounded);
   }
   function judgmentPanel(value) {
@@ -272,13 +272,14 @@
     try { assessment = C.assessExistence(value.assessment?.scores,value.assessment?.nameRisk,value.assessment?.compoundRisk,value.assessment?.sentenceRisk); } catch { /* Older responses may only contain the original single score. */ }
     const score = assessment?.score ?? value.probability;
     if (!C.unitScore(score)) return '';
-    const heading = `<div class="judgment-heading"><div><span>Jevの総合判定</span><h3>総合スコア</h3><small>高いほど、アウトの手がかり</small></div><div class="judgment-total"><strong>${escapeHTML(scoreLabel(score))}</strong><span> / 100</span></div></div>`;
+    const heading = `<div class="judgment-heading"><div><span>Jevの総合スコア</span><h3>総合スコア</h3><small>高いほど、アウトの手がかり</small></div><div class="judgment-total"><strong>${escapeHTML(scoreLabel(score))}</strong><span> / 100</span></div></div>`;
     const manualNote = value.source === 'manual' ? '<p class="manual-score-note">勝敗は、みんなの判断で変更しました。スコアはJevの元の判断です。</p>' : '';
     if (!assessment) return `<section class="judgment-panel" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="score-note">詳しい内訳は届いていません。数値はJevの判断で、実在の確率ではありません。</p></details>${manualNote}</section>`;
     const strongest = [...C.PERSPECTIVES,C.COMPOUND_PERSPECTIVE,C.SENTENCE_PERSPECTIVE].find(view => view.id === assessment.strongest);
     const row = ({id,label,hint},score) => `<div class="score-row ${id === assessment.strongest ? 'strongest' : ''}" data-score="${id}"><dt><strong>${label}</strong><small>${hint}</small></dt><dd><meter min="0" max="100" value="${score*100}" aria-label="${label}のスコア"></meter><span>${escapeHTML(scoreLabel(score))}</span></dd></div>`;
     const {outAt,safeAt,nameCautionAt,structureReviewAt} = C.JUDGMENT_POLICY;
-    return `<section class="judgment-panel" data-assessment="${assessment.status}" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="judgment-basis">実在の7観点と、つぎはぎ・文章をチェック。いちばん強い手がかりは「${strongest.label}」。</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}${row(C.COMPOUND_PERSPECTIVE,assessment.compoundRisk)}${row(C.SENTENCE_PERSPECTIVE,assessment.sentenceRisk)}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">実在・つぎはぎ・文章のどれか${outAt*100}以上でアウト。つぎはぎ・文章が${structureReviewAt*100}以上なら、みんなで確認。実在が全部${safeAt*100}以下で、「名前かも」が${nameCautionAt*100}未満、つぎはぎ・文章も${structureReviewAt*100}未満ならセーフ。それ以外も、みんなで確認。</p><p class="score-note">実在・つぎはぎ・文章のうち、いちばん高い値が総合スコア。つぎはぎ・文章判定は、実在するという意味ではありません。数値はJevの判断で、実在の確率や検索結果ではありません。</p></details>${manualNote}</section>`;
+    const helper = value.fallback ? `<div class="assistant-evidence"><strong>助っ人の追加確認</strong><p>${value.fallback.state === 'completed' ? escapeHTML(value.fallback.answer?.detail || '具体的な手がかりを追加確認したよ。') : '追加確認できなかったため、勝敗はみんなで決められます。'}</p><small>Jevの元の数値は変えず、追加の手がかりで判定しています。モデルの記憶で、Web検索の結果ではありません。</small></div>` : '';
+    return `<section class="judgment-panel" data-assessment="${assessment.status}" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="judgment-basis">実在の7観点と、つぎはぎ・文章をチェック。いちばん強い手がかりは「${strongest.label}」。</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}${row(C.COMPOUND_PERSPECTIVE,assessment.compoundRisk)}${row(C.SENTENCE_PERSPECTIVE,assessment.sentenceRisk)}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">実在・つぎはぎ・文章のどれか${outAt*100}以上でアウト。実在が全部${safeAt*100}以下で、「名前かも」が${nameCautionAt*100}未満、つぎはぎ・文章も${structureReviewAt*100}未満ならセーフ。その間は助っ人にも確認し、争点が残るときはみんなで審議。</p>${helper}<p class="score-note">実在・つぎはぎ・文章のうち、いちばん高い値が総合スコア。つぎはぎ・文章判定は、実在するという意味ではありません。数値はJevの判断で、実在の確率や検索結果ではありません。</p></details>${manualNote}</section>`;
   }
   function showResult(value) {
     phase = 'verdict'; result = value;
@@ -288,8 +289,9 @@
     $('phase-badge').textContent = value.status === 'error' ? '接続を、かくにん' : value.status === 'review' ? 'みんなで、しんぱん' : 'はんてい結果';
     const word = currentWord?.word || '';
     const safe = value.status === 'safe', out = value.status === 'out', review = value.status === 'review', error = value.status === 'error';
-    const compoundCheck = ['compound','possible_compound'].includes(value.assessment?.reason);
-    const sentenceCheck = ['sentence','possible_sentence'].includes(value.assessment?.reason);
+    const decisionReason = value.decisionReason || value.assessment?.reason;
+    const compoundCheck = ['compound','possible_compound'].includes(decisionReason);
+    const sentenceCheck = ['sentence','possible_sentence'].includes(decisionReason);
     const title = safe ? 'ナイモノ、はっけん！' : out ? (value.source === 'rule' ? (value.reason === 'time' ? 'じかん、きちゃった！' : value.reason === 'pass' ? '今回は、おやすみ！' : value.reason === 'n' ? '「ん」で おしまい！' : value.reason === 'repeat' ? 'それ、もう出た！' : 'つながらなかった！') : value.source === 'manual' ? 'みんなで、アウト！' : sentenceCheck ? '文章に、なってる！' : compoundCheck ? 'ことばの、つぎはぎ！' : 'それ、あるって！') : review ? (sentenceCheck ? '名前かな？ 文章かな？' : compoundCheck ? 'つぎはぎかも？' : 'ある？ ない？ どっちだろう。') : 'しんぱん、ひとやすみ。';
     const stamp = safe ? 'NEW NAIMONO!' : out ? (sentenceCheck ? 'SENTENCE! OUT!' : compoundCheck ? 'MIX! OUT!' : 'OH! NO!') : review ? 'HMM…?' : 'NO PENALTY';
     const art = safe ? game.players[game.current].avatar : out ? 'pink' : 'green';
@@ -305,7 +307,9 @@
     }
     $('verdict-stage').className = `verdict-stage ${value.status}`;
     const sounds = game.mode === 'shiritori' && !currentWord?.reading && C.validSounds(currentWord?.sounds) ? `<p class="sound-note">しりとりの音：${escapeHTML(currentWord.sounds.first)} → ${escapeHTML(currentWord.sounds.last)}</p>` : '';
-    $('verdict-stage').innerHTML = `<span class="verdict-stamp">${stamp}</span>${refereeReaction(value,art)}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2>${scores}<p class="verdict-message">${escapeHTML(value.message)}</p>${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}<div class="verdict-actions">${buttons}</div>`;
+    const discussion = value.discussion;
+    const discussionBox = value.source !== 'manual' && discussion?.prompt && (discussion.level === 'optional' || (discussion.level === 'required' && review)) ? `<aside class="discussion-box ${discussion.level}" aria-label="${discussion.level === 'required' ? 'みんなで審議' : 'おしゃべりのタネ'}"><strong>${discussion.level === 'required' ? 'みんなで、審議！' : 'おしゃべりのタネ'}</strong><p>${escapeHTML(discussion.prompt)}</p>${discussion.level === 'optional' ? '<small>お話ししながら、次へ進んでOK。</small>' : ''}</aside>` : '';
+    $('verdict-stage').innerHTML = `<span class="verdict-stamp">${stamp}</span>${refereeReaction(value,art)}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2>${scores}<p class="verdict-message">${value.decisionBy === 'assistant' ? '<span class="assistant-badge">助っ人も確認！</span>' : ''}${escapeHTML(value.message)}</p>${discussionBox}${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}<div class="verdict-actions">${buttons}</div>`;
     $('verdict-stage').querySelectorAll('[data-verdict]').forEach(button => button.addEventListener('click',() => handleVerdict(button.dataset.verdict)));
     if (safe) { chirp('safe'); confetti(); } else if (out) chirp('out');
   }
