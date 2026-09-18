@@ -161,7 +161,7 @@
     $('word-input').value = ''; $('reading-input').value = ''; $('reading-wrap').hidden = true;
     $('form-error').hidden = true; $('word-input').disabled = false; $('submit-button').disabled = false;
     $('lab-message').textContent = ['でたらめで、だいじょうぶ。','きみの頭の中、のぞいてみたい。','まだない名前、つけてみよう。'][game.turn % 3];
-    $('input-hint').textContent = Speech ? '漢字・カタカナも、そのままでOK。文字かマイクでどうぞ。' : '漢字・カタカナも、そのまま入力してあそべます。';
+    $('input-hint').textContent = '漢字・カタカナもOK。スペースは自動でつめるよ。';
     $('mic-button').disabled = !Speech; $('mic-button').title = Speech ? '音声で入力。聞き取った文字のまま判定できます。' : '音声入力に対応していません。文字であそべます。';
     $('submit-button').innerHTML = `このことばで、判定！${icon('arrow')}`;
     updateTimer(); renderPlayers();
@@ -251,6 +251,16 @@
     const value = C.flavorFor(flavor);
     return value ? `<span class="flavor-badge">語感は、${value.label}</span>` : '';
   }
+  function refereeReaction(value, art) {
+    const category = C.categoryFor(value.category), flavor = C.flavorFor(value.flavor);
+    if (!category && !flavor) return creature(art,'verdict-art');
+    const impressions = {
+      soft:'ふわふわの予感！', bold:'つよそうな響き！', mysterious:'ひみつがありそう！',
+      futuristic:'未来から来たみたい！', cheerful:'なんだか、ごきげん！', natural:'すっと、なじむ名前！'
+    };
+    const title = category ? category.id === 'other' ? 'ふしぎなものっぽい！' : `${category.label}！` : impressions[flavor.id];
+    return `<div class="referee-reaction" data-impression="${category?.id || 'other'}">${creature(art,'verdict-art')}<div class="referee-bubble"><small>Jevのひらめき</small><strong><span class="referee-symbol" aria-hidden="true">${category?.symbol || '✳'}</span>${title}</strong>${category && flavor ? `<span class="referee-flavor">${impressions[flavor.id]}</span>` : ''}<span class="referee-caption">名前から想像したよ</span></div></div>`;
+  }
   function scoreLabel(value) {
     const score = value * 100, rounded = Math.round(score);
     // Keep rounded labels from appearing to cross the decision thresholds.
@@ -260,15 +270,20 @@
   function judgmentPanel(value) {
     let assessment;
     try { assessment = C.assessExistence(value.assessment?.scores,value.assessment?.nameRisk); } catch { /* Older responses may only contain the original single score. */ }
-    if (!assessment) return C.unitScore(value.probability) ? `<section class="judgment-panel"><h3>Jevの判定スコア</h3><p>全体の聞き覚え：${escapeHTML(scoreLabel(value.probability))} / 100</p><p class="score-note">観点別のスコアは届いていません。これはJevの判断値です。</p></section>` : '';
+    const score = assessment?.score ?? value.probability;
+    if (!C.unitScore(score)) return '';
+    const heading = `<div class="judgment-heading"><div><span>Jevの総合判定</span><h3>総合スコア</h3><small>高いほど、あることばっぽい</small></div><div class="judgment-total"><strong>${escapeHTML(scoreLabel(score))}</strong><span> / 100</span></div></div>`;
+    const manualNote = value.source === 'manual' ? '<p class="manual-score-note">勝敗は、みんなの判断で変更しました。スコアはJevの元の判断です。</p>' : '';
+    if (!assessment) return `<section class="judgment-panel" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="score-note">全体の聞き覚えだけのスコアです。観点別のスコアは届いていません。数値はJevの判断で、実在の確率ではありません。</p></details>${manualNote}</section>`;
     const strongest = C.PERSPECTIVES.find(view => view.id === assessment.strongest);
     const row = ({id,label,hint},score) => `<div class="score-row ${id === assessment.strongest ? 'strongest' : ''}" data-score="${id}"><dt><strong>${label}</strong><small>${hint}</small></dt><dd><meter min="0" max="100" value="${score*100}" aria-label="${label}のスコア"></meter><span>${escapeHTML(scoreLabel(score))}</span></dd></div>`;
     const {outAt,safeAt,nameCautionAt} = C.JUDGMENT_POLICY;
-    return `<section class="judgment-panel" aria-label="Jevの観点別スコア"><div class="judgment-heading"><div><span>7つの観点でチェック</span><h3>既存の手がかり</h3></div><div class="judgment-total"><strong>${escapeHTML(scoreLabel(assessment.score))}</strong><span> / 100</span></div></div><p class="judgment-basis">いちばん強い観点：${strongest.label}</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">どれか${outAt*100}以上ならアウト。全部${safeAt*100}以下で「名前かも」が${nameCautionAt*100}未満ならセーフ。それ以外は、みんなで確認。</p><p class="score-note">平均せず、いちばん強い手がかりを採用。数値はJevの判断で、実在の確率や検索結果ではありません。</p>${value.source === 'manual' ? '<p class="manual-score-note">勝敗は、みんなの判断で変更しました。スコアはJevの元の判断です。</p>' : ''}</section>`;
+    return `<section class="judgment-panel" data-assessment="${assessment.status}" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="judgment-basis">7つの観点でチェック。いちばん強い観点は「${strongest.label}」。</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">どれか${outAt*100}以上ならアウト。全部${safeAt*100}以下で「名前かも」が${nameCautionAt*100}未満ならセーフ。それ以外は、みんなで確認。</p><p class="score-note">平均せず、いちばん強い手がかりを採用。数値はJevの判断で、実在の確率や検索結果ではありません。</p></details>${manualNote}</section>`;
   }
   function showResult(value) {
     phase = 'verdict'; result = value;
     stopClock(); stopRecognition();
+    $('arena').querySelectorAll('.confetti').forEach(el => el.remove());
     $('input-stage').hidden = true; $('judging-stage').hidden = true; $('verdict-stage').hidden = false;
     $('phase-badge').textContent = value.status === 'error' ? '接続を、かくにん' : value.status === 'review' ? 'みんなで、しんぱん' : 'はんてい結果';
     const word = currentWord?.word || '';
@@ -287,9 +302,8 @@
       buttons = `<button class="primary-button" data-verdict="next">${last ? 'けっかを、見よう！' : 'つぎの人に、わたそう'}${icon('arrow')}</button><button class="text-button appeal" data-verdict="${value.source === 'rule' ? 'edit' : 'appeal'}">${value.source === 'rule' ? '入力・聞きまちがいだった' : 'ちょっと待った！ 判定を直す'}</button>`;
     }
     $('verdict-stage').className = `verdict-stage ${value.status}`;
-    const classification = safe && (C.categoryFor(value.category) || C.flavorFor(value.flavor)) ? `<div class="discovery-classification"><small>Jevが想像した、ことばの個性</small>${categoryBadge(value.category)}${flavorBadge(value.flavor)}</div>` : '';
     const sounds = game.mode === 'shiritori' && !currentWord?.reading && C.validSounds(currentWord?.sounds) ? `<p class="sound-note">しりとりの音：${escapeHTML(currentWord.sounds.first)} → ${escapeHTML(currentWord.sounds.last)}</p>` : '';
-    $('verdict-stage').innerHTML = `<span class="verdict-stamp">${stamp}</span>${creature(art,'verdict-art')}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2><p class="verdict-message">${escapeHTML(value.message)}</p>${classification}${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}${scores}<div class="verdict-actions">${buttons}</div>`;
+    $('verdict-stage').innerHTML = `<span class="verdict-stamp">${stamp}</span>${refereeReaction(value,art)}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2>${scores}<p class="verdict-message">${escapeHTML(value.message)}</p>${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}<div class="verdict-actions">${buttons}</div>`;
     $('verdict-stage').querySelectorAll('[data-verdict]').forEach(button => button.addEventListener('click',() => handleVerdict(button.dataset.verdict)));
     if (safe) { chirp('safe'); confetti(); } else if (out) chirp('out');
   }
@@ -354,9 +368,9 @@
   function confetti() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const colors = ['#c4eb6b','#efb3c7','#b8c9f3','#f6b37b'];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 28; i++) {
       const piece = document.createElement('i'); piece.className = 'confetti'; piece.setAttribute('aria-hidden','true');
-      piece.style.setProperty('--x',`${3+i*4.8}%`); piece.style.setProperty('--delay',`${(i%6)*.09}s`); piece.style.setProperty('--confetti-color',colors[i%4]);
+      piece.style.setProperty('--x',`${2+i*3.5}%`); piece.style.setProperty('--delay',`${(i%6)*.07}s`); piece.style.setProperty('--confetti-color',colors[i%4]);
       $('arena').append(piece); piece.addEventListener('animationend',() => piece.remove(),{once:true});
     }
   }
@@ -427,7 +441,7 @@
       if ($('word-input').value.trim()) {
         phase = 'confirm'; $('phase-badge').textContent = 'ことばを、かくにん';
         $('lab-message').textContent = 'このことばで、あってる？';
-        $('input-hint').textContent = '漢字・カタカナも、そのまま送れるよ。聞きまちがいだけ直してね。';
+        $('input-hint').textContent = 'スペースは自動でつめるよ。聞きまちがいだけ直してね。';
       } else {
         phase = 'ready'; remainingMs = game.seconds*1000; updateTimer();
         $('input-hint').textContent = '聞き取れなかったみたい。もう一度か、文字でどうぞ。';

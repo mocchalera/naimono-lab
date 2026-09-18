@@ -52,7 +52,7 @@
   function validSounds(value) { return Boolean(value && SOUNDS.includes(value.first) && SOUNDS.includes(value.last)); }
   function cleanWord(value) {
     if (typeof value !== 'string') return '';
-    return value.normalize('NFKC').trim().replace(/^[「『\s]+|[」』。．.!！?？\s]+$/gu, '');
+    return value.normalize('NFKC').replace(/\s+/gu, '').replace(/^[「『]+|[」』。．.!！?？]+$/gu, '');
   }
   function toHiragana(value) {
     return cleanWord(value).replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
@@ -76,7 +76,7 @@
     if (!WORD.test(word)) return { ok:false, message:'文字やカタカナ・漢字で、ことばをひとつ いれてね。' };
     if (/^\p{Number}+$/u.test(word)) return { ok:false, message:'数字だけではなく、ことばを いれてね。' };
     const reading = readingFor(word, supplied);
-    if (supplied && (!KANA.test(toHiragana(supplied)) || Array.from(toHiragana(supplied)).length > 40)) {
+    if (cleanWord(supplied) && (!KANA.test(toHiragana(supplied)) || Array.from(toHiragana(supplied)).length > 40)) {
       return { ok:false, message:'よみかたは ひらがなかカタカナで いれてね。' };
     }
     if (mode === 'shiritori' && !reading) return { ok:false, needsReading:true, message:'しりとりのために、よみかたを いれてね。' };

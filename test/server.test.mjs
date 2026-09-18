@@ -32,7 +32,7 @@ test('demo route is explicitly demo and unknowns are review',async t => {
 test('live route and bounded cache use Jev answers; duplicate requests reuse the result',async t => {
   let calls = 0;
   const url = await app(t,{ai:{run:async () => {calls++; return jevResponse(.97);}}});
-  assert.equal((await (await post(url,{word:'りんご'})).json()).status,'out');
+  assert.equal((await (await post(url,{word:'り ん　ご'})).json()).status,'out');
   const second = await (await post(url,{word:'りんご'})).json();
   assert.equal(second.cached,true); assert.equal(second.source,'jev'); assert.equal(calls,1);
 });
@@ -43,7 +43,8 @@ test('kanji and category survive the HTTP route, and sound requests have a separ
     return jevResponse(.1,{category:{type:'choice',choice:'food'},...(input.questions.first_sound ? {first_sound:{type:'choice',choice:'く',probabilities:{'く':.9}},last_sound:{type:'choice',choice:'ち',probabilities:{'ち':.9}}} : {})});
   }}});
   const input = {word:'雲ぷる餅'};
-  assert.equal((await (await post(url,input)).json()).sounds,null);
+  assert.equal((await (await post(url,{word:' 雲 ぷる　餅。 '})).json()).sounds,null);
+  assert.equal(calls[0].state.word,'雲ぷる餅');
   const shiri = await (await post(url,{...input,mode:'shiritori'})).json();
   assert.equal(shiri.category,'food'); assert.deepEqual(shiri.sounds,{first:'く',last:'ち'});
   assert.equal(calls.length,2); assert.equal(calls[1].state.word,'雲ぷる餅');

@@ -38,7 +38,8 @@ test('Worker passes kanji through and caches shiritori sounds independently',asy
     return jevResponse(.1,{category:{type:'choice',choice:'food'},...(input.questions.first_sound ? {first_sound:{type:'choice',choice:'く',probabilities:{'く':.95}},last_sound:{type:'choice',choice:'ち',probabilities:{'ち':.95}}} : {})});
   }}};
   const input = {word:'雲ぷる餅'}, headers = {'CF-Connecting-IP':'worker-sounds'};
-  assert.equal((await json(await handleRequest(post('/api/judge',input,headers),env))).sounds,null);
+  assert.equal((await json(await handleRequest(post('/api/judge',{word:' 雲 ぷる　餅。 '},headers),env))).sounds,null);
+  assert.equal((await json(await handleRequest(post('/api/judge',input,headers),env))).cached,true);
   const result = await json(await handleRequest(post('/api/judge',{...input,mode:'shiritori'},headers),env));
   assert.equal(result.category,'food'); assert.deepEqual(result.sounds,{first:'く',last:'ち'});
   assert.equal((await json(await handleRequest(post('/api/judge',{...input,mode:'shiritori'},headers),env))).cached,true);

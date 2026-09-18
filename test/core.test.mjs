@@ -8,6 +8,23 @@ test('normalizes half-width kana and voice-added punctuation', () => {
   assert.equal(C.toHiragana('ﾓﾆｭﾗｯﾋﾟ'),'もにゅらっぴ');
   assert.equal(C.toHiragana('ガギグゲゴ'),'がぎぐげご');
 });
+test('spaces from speech and typing disappear before validation, readings and duplicate checks', () => {
+  for (const word of ['雲 ぷる 餅',' 雲　ぷる　餅。 ','「雲\tぷる\n餅！」','雲\u00a0ぷる\u2009餅']) {
+    const result = C.checkTurn({word});
+    assert.equal(result.status,'pending'); assert.equal(result.word,'雲ぷる餅');
+  }
+  const kana = C.checkTurn({word:' モ ニュ　ラッピ ',mode:'shiritori'});
+  assert.equal(kana.word,'モニュラッピ'); assert.equal(kana.identity,'もにゅらっぴ');
+  assert.deepEqual(kana.sounds,{first:'も',last:'ぴ'});
+  const kanji = C.checkTurn({word:'雲 ぷる 餅',reading:' クモ　プル モチ ',mode:'shiritori'});
+  assert.deepEqual(kanji.sounds,{first:'く',last:'ち'}); assert.equal(kanji.reading,'くもぷるもち');
+  assert.equal(C.checkTurn({word:'モニュ ラッピ',history:[{word:'もにゅらっぴ'}]}).reason,'repeat');
+  assert.equal(C.checkTurn({word:'モ ニュラッピ',mode:'shiritori',required:'く'}).reason,'first');
+  assert.equal(C.checkTurn({word:'り ん ご',reading:'   '}).reading,'りんご');
+  assert.equal(C.validateWord('な い こ と ば').word,'ないことば');
+  assert.equal(C.validateWord('あ '.repeat(25)).ok,false);
+  assert.equal(C.validateWord('　 \n\t').ok,false);
+});
 test('kana pronunciation cannot be replaced to cheat shiritori',() => {
   assert.equal(C.readingFor('りんご','あいう'),'りんご');
   assert.equal(C.readingFor('不思議','ふしぎ'),'ふしぎ');
@@ -24,8 +41,8 @@ test('voicing is preserved rather than silently rewritten',() => {
   assert.equal(C.lastSound('ぽにょぎ'),'ぎ');
   assert.equal(C.checkTurn({word:'きょなも',mode:'shiritori',required:'ぎ'}).reason,'first');
 });
-test('rejects empty, markup, whitespace phrases, numbers-only, oversize and invalid readings',() => {
-  for (const word of ['', '<script>alert(1)</script>', '１２３', 'ない ことば','あ'.repeat(25)]) assert.equal(C.validateWord(word).ok,false);
+test('rejects empty, markup, punctuation inside words, numbers-only, oversize and invalid readings',() => {
+  for (const word of ['', '<script>alert(1)</script>', '< script >', '１２３', 'ない!ことば','あ'.repeat(25)]) assert.equal(C.validateWord(word).ok,false);
   assert.equal(C.validateWord('ChatGPT').ok, true);
   assert.equal(C.validateWord('不思議','abc','shiritori').ok,false);
   assert.equal(C.validateWord('ーもにゃ').ok,false);
