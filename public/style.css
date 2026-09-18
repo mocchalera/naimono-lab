@@ -98,3 +98,33 @@
 @media(max-width:680px){.judgment-panel{margin-top:12px}.score-list{column-gap:14px;row-gap:12px}.score-row dt strong{font-size:11px}.judgment-heading{padding:12px}.judgment-heading h3{font-size:17px}.judgment-heading small{font-size:10px;max-width:140px}.judgment-total strong{font-size:44px}.referee-reaction{grid-template-columns:80px minmax(0,1fr);gap:10px;margin:5px 0}.referee-reaction>.verdict-art{width:80px;height:99px}.referee-bubble{padding:9px 11px}.referee-bubble>strong{font-size:17px}.referee-flavor{font-size:12px}.referee-caption{font-size:9px}.verdict-stage:has(.judgment-panel)>.verdict-art{width:88px;height:88px}}
 @media(max-width:360px){.score-list{grid-template-columns:1fr}.score-row{display:grid;grid-template-columns:minmax(0,1fr) 70px;gap:8px;align-items:center}.score-row dd{margin:0}.name-caution .score-row{grid-template-columns:1fr}.name-caution .score-row dd{max-width:none}.referee-reaction{grid-template-columns:62px minmax(0,1fr);gap:9px}.referee-reaction>.verdict-art{width:62px;height:86px}.referee-bubble>strong{font-size:15px}.referee-flavor{font-size:11px}.judgment-heading{gap:7px;padding:10px}.judgment-heading h3{font-size:16px}.judgment-total strong{font-size:38px}}
 .discussion-box{margin:10px 0 4px;padding:12px 15px;border:1.5px dashed var(--ink);border-radius:14px;background:var(--paper);text-align:left;overflow-wrap:anywhere}.discussion-box strong{display:block;font-size:13px}.discussion-box p{font-size:13px;margin:4px 0}.discussion-box small{font-size:11px;color:var(--muted)}.discussion-box.required{background:#f9e7b5;border-style:solid}.assistant-badge{display:block;width:fit-content;margin:0 auto 7px;padding:2px 9px;border-radius:20px;background:var(--blue);font-weight:800;font-size:11px}.assistant-evidence{margin:12px 0;padding:12px;border-left:3px solid var(--blue);background:var(--paper);font-size:12px;overflow-wrap:anywhere}.assistant-evidence p{margin:5px 0}.assistant-evidence small{font-size:10px;color:var(--muted)}
+
+/* Outcome Badge & Wait Progress Styles */
+.verdict-outcome{display:flex;flex-direction:column;align-items:center;gap:6px;margin:2px 0 10px;width:100%;max-width:440px}
+.outcome-badge{display:inline-flex;align-items:center;justify-content:center;gap:12px;padding:9px 28px;border:2.5px solid var(--ink);border-radius:20px;box-shadow:3px 4px 0 var(--ink);animation:stamp-pop .45s ease-out both}
+.outcome-mark{font-size:36px;line-height:1;font-weight:900;font-family:"Hiragino Maru Gothic ProN","Hiragino Kaku Gothic ProN",sans-serif}
+.outcome-label{font-size:24px;line-height:1;font-weight:900;letter-spacing:1px}
+.outcome-safe .outcome-badge{background:var(--green);color:var(--ink)}
+.outcome-out .outcome-badge{background:#ff9575;color:var(--ink)}
+.outcome-review .outcome-badge{background:var(--blue);color:var(--ink)}
+.outcome-error .outcome-badge{background:var(--paper);color:var(--muted);border-style:dashed}
+.verdict-outcome .verdict-stamp{font-size:10px;padding:2px 10px;letter-spacing:1.5px;margin-bottom:0;box-shadow:2px 2px 0 var(--ink);opacity:.9}
+
+.judging-status{font-size:12px;font-weight:700;color:var(--ink);margin:12px auto 0;padding:5px 16px;border-radius:20px;background:var(--paper);border:1px solid var(--line);display:inline-block;transition:all .3s}
+.judging-stage.extended-wait .judging-status{background:#fff3cc;border-color:#d4b868;animation:extended-pulse 2s infinite ease-in-out}
+@keyframes extended-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+
+@media(max-width:680px){
+  .outcome-badge{padding:8px 22px;gap:10px;border-radius:16px}
+  .outcome-mark{font-size:30px}
+  .outcome-label{font-size:21px}
+}
+@media(max-width:360px){
+  .outcome-badge{padding:7px 16px;gap:8px;border-radius:14px}
+  .outcome-mark{font-size:26px}
+  .outcome-label{font-size:19px}
+}
+@media(prefers-reduced-motion:reduce){
+  .outcome-badge,.judging-stage.extended-wait .judging-status{animation:none!important}
+}
+

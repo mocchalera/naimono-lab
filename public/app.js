@@ -13,7 +13,7 @@
   let config = {judge:'demo',configured:false,model:null}, configNote = '';
   let remainingMs = 10000, deadline = 0, clock = null, lastBeep = null;
   let recognition = null, speechExpired = false, speechExpiryTimer = null, microphoneAllowed = false;
-  let requestController = null, composing = false, result = null, currentWord = null;
+  let requestController = null, composing = false, result = null, currentWord = null, judgingTimer = null;
   let audio = null, soundOn = false, toastTimer = null;
   let confirmCallback = null;
   let galleryCategory = 'all';
@@ -130,6 +130,7 @@
     $('mic-button').setAttribute('aria-label','音声で答える');
   }
   function cleanupTurn() {
+    clearTimeout(judgingTimer); judgingTimer = null;
     stopClock(); stopRecognition(); requestController?.abort(); requestController = null;
     $('arena').querySelectorAll('.confetti').forEach(el => el.remove());
   }
@@ -209,7 +210,17 @@
     const token = turnToken;
     phase = 'judging'; $('input-stage').hidden = true; $('verdict-stage').hidden = true; $('judging-stage').hidden = false;
     $('phase-badge').textContent = 'しんぱん中'; $('judging-word').textContent = currentWord.word;
+    const statusEl = $('judging-status');
+    if (statusEl) statusEl.textContent = 'しんぱんが、しらべています…';
+    $('judging-stage').classList.remove('extended-wait');
     $('submit-button').disabled = true;
+    clearTimeout(judgingTimer);
+    judgingTimer = setTimeout(() => {
+      if (token === turnToken && phase === 'judging') {
+        if (statusEl) statusEl.textContent = 'もうひと調べ中… じっくり確認しています。';
+        $('judging-stage').classList.add('extended-wait');
+      }
+    }, 2000);
     try {
       let value;
       if (config.judge === 'demo') {
@@ -217,7 +228,7 @@
         await new Promise(resolve => setTimeout(resolve,350)); // Presentation only; no invented latency claims.
       } else {
         requestController = new AbortController();
-        const timeout = setTimeout(() => requestController?.abort(),13000);
+        const timeout = setTimeout(() => requestController?.abort(),18000);
         try {
           const response = await fetch('/api/judge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word:currentWord.word,reading:currentWord.reading,mode:game.mode}),signal:requestController.signal});
           const data = await response.json();
@@ -234,6 +245,8 @@
       if (token !== turnToken || phase !== 'judging') return;
       const message = error.name === 'AbortError' ? '返事が間に合いませんでした。負けにはなりません。' : error.message || 'しんぱんにつながりませんでした。';
       showResult({status:'error',source:'error',message});
+    } finally {
+      clearTimeout(judgingTimer); judgingTimer = null;
     }
   }
   function resolveCurrentSounds() {
@@ -306,10 +319,14 @@
       buttons = `<button class="primary-button" data-verdict="next">${last ? 'けっかを、見よう！' : 'つぎの人に、わたそう'}${icon('arrow')}</button><button class="text-button appeal" data-verdict="${value.source === 'rule' ? 'edit' : 'appeal'}">${value.source === 'rule' ? '入力・聞きまちがいだった' : 'ちょっと待った！ 判定を直す'}</button>`;
     }
     $('verdict-stage').className = `verdict-stage ${value.status}`;
+    const outcomeMark = safe ? '○' : out ? '×' : review ? '？' : '…';
+    const outcomeText = safe ? 'セーフ' : out ? 'アウト' : review ? 'みんなで審議' : '判定おやすみ';
+    const outcomeAria = safe ? '判定結果: ○ セーフ' : out ? '判定結果: × アウト' : review ? '判定結果: ？ みんなで審議' : '判定結果: … 判定おやすみ（負けにはなりません）';
+    const outcomeBadge = `<div class="verdict-outcome outcome-${value.status}" role="status" aria-label="${outcomeAria}"><div class="outcome-badge"><span class="outcome-mark" aria-hidden="true">${outcomeMark}</span><span class="outcome-label">${outcomeText}</span></div><span class="verdict-stamp">${stamp}</span></div>`;
     const sounds = game.mode === 'shiritori' && !currentWord?.reading && C.validSounds(currentWord?.sounds) ? `<p class="sound-note">しりとりの音：${escapeHTML(currentWord.sounds.first)} → ${escapeHTML(currentWord.sounds.last)}</p>` : '';
     const discussion = value.discussion;
     const discussionBox = value.source !== 'manual' && discussion?.prompt && (discussion.level === 'optional' || (discussion.level === 'required' && review)) ? `<aside class="discussion-box ${discussion.level}" aria-label="${discussion.level === 'required' ? 'みんなで審議' : 'おしゃべりのタネ'}"><strong>${discussion.level === 'required' ? 'みんなで、審議！' : 'おしゃべりのタネ'}</strong><p>${escapeHTML(discussion.prompt)}</p>${discussion.level === 'optional' ? '<small>お話ししながら、次へ進んでOK。</small>' : ''}</aside>` : '';
-    $('verdict-stage').innerHTML = `<span class="verdict-stamp">${stamp}</span>${refereeReaction(value,art)}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2>${scores}<p class="verdict-message">${value.decisionBy === 'assistant' ? '<span class="assistant-badge">助っ人も確認！</span>' : ''}${escapeHTML(value.message)}</p>${discussionBox}${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}<div class="verdict-actions">${buttons}</div>`;
+    $('verdict-stage').innerHTML = `${outcomeBadge}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2>${refereeReaction(value,art)}${scores}<p class="verdict-message">${value.decisionBy === 'assistant' ? '<span class="assistant-badge">助っ人も確認！</span>' : ''}${escapeHTML(value.message)}</p>${discussionBox}${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}<div class="verdict-actions">${buttons}</div>`;
     $('verdict-stage').querySelectorAll('[data-verdict]').forEach(button => button.addEventListener('click',() => handleVerdict(button.dataset.verdict)));
     if (safe) { chirp('safe'); confetti(); } else if (out) chirp('out');
   }

@@ -397,6 +397,60 @@ with sync_playwright() as p:
                 if width==390: page.locator('#arena').screenshot(path=str(OUT/'discussion-mobile.png'),animations='disabled')
             page.close()
 
+    for width in [320, 390, 1360]:
+        page = new_page(width=width, height=844, html=live_html, setup=live_setup)
+        page.evaluate("window.mockStatus='safe'")
+        start(page); answer(page, 'もにゅらっぴ')
+        check(f'Safe outcome badge has prominent circle and safe label at {width}px',
+              page.locator('.outcome-safe .outcome-mark').inner_text() == '○' and
+              page.locator('.outcome-safe .outcome-label').inner_text() == 'セーフ' and
+              page.locator('.outcome-safe').is_visible())
+        if width == 390:
+            page.locator('#arena').screenshot(path=str(OUT/'verdict-safe-390.png'), animations='disabled')
+        page.close()
+
+        page = new_page(width=width, height=844, html=live_html, setup=live_setup)
+        page.evaluate("window.mockStatus='out'")
+        start(page); answer(page, 'りんご')
+        check(f'Out outcome badge has prominent cross and out label at {width}px',
+              page.locator('.outcome-out .outcome-mark').inner_text() == '×' and
+              page.locator('.outcome-out .outcome-label').inner_text() == 'アウト' and
+              page.locator('.outcome-out').is_visible())
+        if width == 390:
+            page.locator('#arena').screenshot(path=str(OUT/'verdict-out-390.png'), animations='disabled')
+        page.close()
+
+        page = new_page(width=width, height=844, html=live_html, setup=live_setup)
+        page.evaluate("window.mockStatus='review'")
+        start(page); answer(page, 'ぽよぽよ')
+        check(f'Review outcome badge has question mark and review label at {width}px',
+              page.locator('.outcome-review .outcome-mark').inner_text() == '？' and
+              page.locator('.outcome-review .outcome-label').inner_text() == 'みんなで審議' and
+              page.locator('.outcome-review').is_visible())
+        if width == 390:
+            page.locator('#arena').screenshot(path=str(OUT/'verdict-review-390.png'), animations='disabled')
+        page.close()
+
+    slow_wait_setup = """() => {
+      window.fetch = async (url, opts={}) => {
+        if (url==='/api/config') return {ok:true,json:async()=>({judge:'jev',configured:true,model:'jev-1.13.0'})};
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        const defaultScores = {exists:0.1,everyday:.01,names:.02,culture:.03,places_products:.01,specialist:.02,variants:.01};
+        const assessment = NaimonoCore.assessExistence(defaultScores,.1,.01,.01);
+        return {ok:true,json:async()=>({status:'safe',source:'jev',probability:assessment.score,assessment,message:'テスト用Jev回答',category:'animal',sounds:null,flavor:'soft'})};
+      };
+    }"""
+    page = new_page(width=390, height=844, html=live_html, setup=slow_wait_setup)
+    start(page)
+    page.locator('#word-input').fill('しらべちゅう')
+    page.locator('#submit-button').click()
+    expect(page.locator('#judging-stage')).to_be_visible()
+    check('Initial waiting status indicates checking in progress', 'しらべています' in page.locator('#judging-status').inner_text())
+    page.wait_for_timeout(2100)
+    check('Extended wait status indicates deeper checking without false claims', 'もうひと調べ中' in page.locator('#judging-status').inner_text() and 'extended-wait' in page.locator('#judging-stage').get_attribute('class'))
+    expect(page.locator('#verdict-stage')).to_be_visible(timeout=5000)
+    page.close()
+
     check('No uncaught browser JavaScript errors',not errors)
     (OUT/'browser-report.json').write_text(json.dumps({'passed':len(checks),'checks':checks,'errors':errors,'notes':['Standalone HTML rendered directly, not localhost navigation.','Jev HTTP and microphone branches use explicit mocks.','Storage roundtrip uses an in-memory Storage mock.']},ensure_ascii=False,indent=2))
     browser.close()
