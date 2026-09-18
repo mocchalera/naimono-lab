@@ -74,7 +74,7 @@ test('Worker cache separates model settings, reserves budget before fallback and
   assert.equal((await call()).decisionBy,'assistant');assert.equal((await call()).cached,true);
   assert.deepEqual([jevCalls,helperCalls,reservations],[1,1,1]);
   assert.equal((await call({...env,FALLBACK_ENABLED:'false'})).status,'review');
-  assert.equal((await call({...env,FALLBACK_MODEL:'@cf/google/gemma-4-26b-a4b-it'})).decisionBy,'assistant');
+  assert.equal((await call({...env,FALLBACK_MODEL:'@cf/qwen/qwen3-30b-a3b-fp8'})).decisionBy,'assistant');
   assert.deepEqual([jevCalls,helperCalls,reservations],[3,2,2]);
   available=false;
   const second={word:'れみょふゅ'};

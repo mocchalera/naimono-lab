@@ -20,7 +20,7 @@
     "remote": true
   },
   "vars": {
-    "FALLBACK_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "FALLBACK_MODEL": "@cf/google/gemma-4-26b-a4b-it",
     "FALLBACK_ENABLED": "true"
   },
   "durable_objects": {
