@@ -269,16 +269,16 @@
   }
   function judgmentPanel(value) {
     let assessment;
-    try { assessment = C.assessExistence(value.assessment?.scores,value.assessment?.nameRisk); } catch { /* Older responses may only contain the original single score. */ }
+    try { assessment = C.assessExistence(value.assessment?.scores,value.assessment?.nameRisk,value.assessment?.compoundRisk,value.assessment?.sentenceRisk); } catch { /* Older responses may only contain the original single score. */ }
     const score = assessment?.score ?? value.probability;
     if (!C.unitScore(score)) return '';
-    const heading = `<div class="judgment-heading"><div><span>Jevの総合判定</span><h3>総合スコア</h3><small>高いほど、あることばっぽい</small></div><div class="judgment-total"><strong>${escapeHTML(scoreLabel(score))}</strong><span> / 100</span></div></div>`;
+    const heading = `<div class="judgment-heading"><div><span>Jevの総合判定</span><h3>総合スコア</h3><small>高いほど、アウトの手がかり</small></div><div class="judgment-total"><strong>${escapeHTML(scoreLabel(score))}</strong><span> / 100</span></div></div>`;
     const manualNote = value.source === 'manual' ? '<p class="manual-score-note">勝敗は、みんなの判断で変更しました。スコアはJevの元の判断です。</p>' : '';
-    if (!assessment) return `<section class="judgment-panel" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="score-note">全体の聞き覚えだけのスコアです。観点別のスコアは届いていません。数値はJevの判断で、実在の確率ではありません。</p></details>${manualNote}</section>`;
-    const strongest = C.PERSPECTIVES.find(view => view.id === assessment.strongest);
+    if (!assessment) return `<section class="judgment-panel" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="score-note">詳しい内訳は届いていません。数値はJevの判断で、実在の確率ではありません。</p></details>${manualNote}</section>`;
+    const strongest = [...C.PERSPECTIVES,C.COMPOUND_PERSPECTIVE,C.SENTENCE_PERSPECTIVE].find(view => view.id === assessment.strongest);
     const row = ({id,label,hint},score) => `<div class="score-row ${id === assessment.strongest ? 'strongest' : ''}" data-score="${id}"><dt><strong>${label}</strong><small>${hint}</small></dt><dd><meter min="0" max="100" value="${score*100}" aria-label="${label}のスコア"></meter><span>${escapeHTML(scoreLabel(score))}</span></dd></div>`;
-    const {outAt,safeAt,nameCautionAt} = C.JUDGMENT_POLICY;
-    return `<section class="judgment-panel" data-assessment="${assessment.status}" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="judgment-basis">7つの観点でチェック。いちばん強い観点は「${strongest.label}」。</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">どれか${outAt*100}以上ならアウト。全部${safeAt*100}以下で「名前かも」が${nameCautionAt*100}未満ならセーフ。それ以外は、みんなで確認。</p><p class="score-note">平均せず、いちばん強い手がかりを採用。数値はJevの判断で、実在の確率や検索結果ではありません。</p></details>${manualNote}</section>`;
+    const {outAt,safeAt,nameCautionAt,structureReviewAt} = C.JUDGMENT_POLICY;
+    return `<section class="judgment-panel" data-assessment="${assessment.status}" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="judgment-basis">実在の7観点と、つぎはぎ・文章をチェック。いちばん強い手がかりは「${strongest.label}」。</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}${row(C.COMPOUND_PERSPECTIVE,assessment.compoundRisk)}${row(C.SENTENCE_PERSPECTIVE,assessment.sentenceRisk)}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">実在・つぎはぎ・文章のどれか${outAt*100}以上でアウト。つぎはぎ・文章が${structureReviewAt*100}以上なら、みんなで確認。実在が全部${safeAt*100}以下で、「名前かも」が${nameCautionAt*100}未満、つぎはぎ・文章も${structureReviewAt*100}未満ならセーフ。それ以外も、みんなで確認。</p><p class="score-note">実在・つぎはぎ・文章のうち、いちばん高い値が総合スコア。つぎはぎ・文章判定は、実在するという意味ではありません。数値はJevの判断で、実在の確率や検索結果ではありません。</p></details>${manualNote}</section>`;
   }
   function showResult(value) {
     phase = 'verdict'; result = value;
@@ -288,13 +288,15 @@
     $('phase-badge').textContent = value.status === 'error' ? '接続を、かくにん' : value.status === 'review' ? 'みんなで、しんぱん' : 'はんてい結果';
     const word = currentWord?.word || '';
     const safe = value.status === 'safe', out = value.status === 'out', review = value.status === 'review', error = value.status === 'error';
-    const title = safe ? 'ナイモノ、はっけん！' : out ? (value.source === 'rule' ? (value.reason === 'time' ? 'じかん、きちゃった！' : value.reason === 'pass' ? '今回は、おやすみ！' : value.reason === 'n' ? '「ん」で おしまい！' : value.reason === 'repeat' ? 'それ、もう出た！' : 'つながらなかった！') : 'それ、あるって！') : review ? 'ある？ ない？ どっちだろう。' : 'しんぱん、ひとやすみ。';
-    const stamp = safe ? 'NEW NAIMONO!' : out ? 'OH! NO!' : review ? 'HMM…?' : 'NO PENALTY';
+    const compoundCheck = ['compound','possible_compound'].includes(value.assessment?.reason);
+    const sentenceCheck = ['sentence','possible_sentence'].includes(value.assessment?.reason);
+    const title = safe ? 'ナイモノ、はっけん！' : out ? (value.source === 'rule' ? (value.reason === 'time' ? 'じかん、きちゃった！' : value.reason === 'pass' ? '今回は、おやすみ！' : value.reason === 'n' ? '「ん」で おしまい！' : value.reason === 'repeat' ? 'それ、もう出た！' : 'つながらなかった！') : value.source === 'manual' ? 'みんなで、アウト！' : sentenceCheck ? '文章に、なってる！' : compoundCheck ? 'ことばの、つぎはぎ！' : 'それ、あるって！') : review ? (sentenceCheck ? '名前かな？ 文章かな？' : compoundCheck ? 'つぎはぎかも？' : 'ある？ ない？ どっちだろう。') : 'しんぱん、ひとやすみ。';
+    const stamp = safe ? 'NEW NAIMONO!' : out ? (sentenceCheck ? 'SENTENCE! OUT!' : compoundCheck ? 'MIX! OUT!' : 'OH! NO!') : review ? 'HMM…?' : 'NO PENALTY';
     const art = safe ? game.players[game.current].avatar : out ? 'pink' : 'green';
     const scores = judgmentPanel(value);
     let buttons;
     if (review) {
-      buttons = `<button class="primary-button" data-verdict="safe">ないことば！ セーフ${icon('check')}</button><button class="secondary-button" data-verdict="out">それ知ってる！ アウト</button><button class="text-button appeal" data-verdict="edit">ことばを直す</button>`;
+      buttons = `<button class="primary-button" data-verdict="safe">新しいことば！ セーフ${icon('check')}</button><button class="secondary-button" data-verdict="out">${sentenceCheck ? '文章になってる！' : compoundCheck ? 'ことばのつぎはぎ！' : 'それ知ってる！'} アウト</button><button class="text-button appeal" data-verdict="edit">ことばを直す</button>`;
     } else if (error) {
       buttons = `<button class="primary-button" data-verdict="retry">もう一度、つなぐ${icon('reset')}</button><button class="secondary-button" data-verdict="manual">みんなで判定して、続ける</button><button class="text-button appeal" data-verdict="edit">ことばを直す</button>`;
     } else {
@@ -316,7 +318,7 @@
       showResult({...result,status:'review',source:'manual',meaning:null,message:'みんなが納得するほうを、選んでね。'}); return;
     }
     if (action === 'safe' && !resolveCurrentSounds()) return;
-    if (action === 'safe' || action === 'out') showResult({...result,status:action,source:'manual',meaning:null,message:action === 'safe' ? 'みんなで、ないことばに決定！' : 'みんなで、あることばに決定。'});
+    if (action === 'safe' || action === 'out') showResult({...result,status:action,source:'manual',meaning:null,message:action === 'safe' ? 'みんなで、ないことばに決定！' : 'みんなで、アウトに決定。'});
   }
   function editWord() {
     $('verdict-stage').hidden = true; $('input-stage').hidden = false; $('judging-stage').hidden = true;

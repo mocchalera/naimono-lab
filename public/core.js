@@ -29,25 +29,36 @@
     {id:'specialist',label:'専門用語',hint:'科学・技術・趣味のことば'},
     {id:'variants',label:'読み・表記違い',hint:'かな・英字・略称でも考える'}
   ].map(Object.freeze));
-  const JUDGMENT_POLICY = Object.freeze({version:'multi-angle-v3',outAt:.85,safeAt:.20,nameCautionAt:.45});
+  const COMPOUND_PERSPECTIVE = Object.freeze({id:'compound',label:'ことばのつぎはぎ',hint:'意味のあることばを、つないだだけ？'});
+  const SENTENCE_PERSPECTIVE = Object.freeze({id:'sentence',label:'文章っぽさ',hint:'名前ではなく、文や説明になっていない？'});
+  const JUDGMENT_POLICY = Object.freeze({version:'multi-angle-v4-word-form',outAt:.85,safeAt:.20,nameCautionAt:.45,structureReviewAt:.45});
   function unitScore(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1; }
-  function assessExistence(input, nameRisk) {
-    if (!input || !PERSPECTIVES.every(({id}) => unitScore(input[id])) || !unitScore(nameRisk)) throw new Error('Invalid judgment scores');
+  function assessExistence(input, nameRisk, compoundRisk, sentenceRisk) {
+    if (!input || !PERSPECTIVES.every(({id}) => unitScore(input[id])) || !unitScore(nameRisk) || !unitScore(compoundRisk) || !unitScore(sentenceRisk)) throw new Error('Invalid judgment scores');
     const scores = Object.fromEntries(PERSPECTIVES.map(({id}) => [id,input[id]]));
-    const strongest = PERSPECTIVES.reduce((best,view) => scores[view.id] > scores[best.id] || (scores[view.id] === scores[best.id] && best.id === 'exists') ? view : best).id;
-    const score = scores[strongest];
+    const existenceStrongest = PERSPECTIVES.reduce((best,view) => scores[view.id] > scores[best.id] || (scores[view.id] === scores[best.id] && best.id === 'exists') ? view : best).id;
+    const existenceScore = scores[existenceStrongest];
+    const structureScore = Math.max(compoundRisk,sentenceRisk);
+    const structureStrongest = sentenceRisk >= compoundRisk ? 'sentence' : 'compound';
+    const strongest = structureScore > existenceScore ? structureStrongest : existenceStrongest;
+    const score = Math.max(existenceScore,structureScore);
     // These related model judgments are not independent probabilities. A single
     // specific match must not be averaged away by unrelated, low-scoring views.
-    const status = score >= JUDGMENT_POLICY.outAt ? 'out' : score <= JUDGMENT_POLICY.safeAt && nameRisk < JUDGMENT_POLICY.nameCautionAt ? 'safe' : 'review';
-    const reason = status === 'out' ? 'recognized' : status === 'safe' ? 'unrecognized' : score > JUDGMENT_POLICY.safeAt ? 'possible_match' : 'name_caution';
-    return {version:JUDGMENT_POLICY.version,scores,nameRisk,score,strongest,status,reason};
+    const status = score >= JUDGMENT_POLICY.outAt ? 'out' : existenceScore <= JUDGMENT_POLICY.safeAt && nameRisk < JUDGMENT_POLICY.nameCautionAt && structureScore < JUDGMENT_POLICY.structureReviewAt ? 'safe' : 'review';
+    const structureDominates = strongest === structureStrongest;
+    const reason = status === 'out' ? (structureDominates ? structureStrongest : 'recognized') : status === 'safe' ? 'unrecognized' : structureScore >= JUDGMENT_POLICY.structureReviewAt && structureDominates ? `possible_${structureStrongest}` : existenceScore > JUDGMENT_POLICY.safeAt ? 'possible_match' : 'name_caution';
+    return {version:JUDGMENT_POLICY.version,scores,nameRisk,compoundRisk,sentenceRisk,existenceScore,existenceStrongest,score,strongest,status,reason};
   }
   function assessmentMessage(assessment) {
-    const label = PERSPECTIVES.find(view => view.id === assessment.strongest)?.label || 'ことば';
+    const label = PERSPECTIVES.find(view => view.id === assessment.existenceStrongest)?.label || 'ことば';
+    if (assessment.reason === 'compound') return '意味のあることばを、つないだだけかも！ このゲームでは、ことばのつぎはぎもアウトだよ。';
+    if (assessment.reason === 'possible_compound') return '意味のあることばの、つぎはぎっぽい？ 新しい響きになっているか、みんなで確かめよう。';
+    if (assessment.reason === 'sentence') return '名前というより、文章になっているみたい！ 文や説明をつくるのも、このゲームではアウトだよ。';
+    if (assessment.reason === 'possible_sentence') return '名前かな、それとも文章かな？ 文や説明になっていないか、みんなで確かめよう。';
     if (assessment.reason === 'recognized') return `「${label}」の観点で、既存のことばの強い手がかりがあったよ。`;
     if (assessment.reason === 'possible_match') return `「${label}」に気になる手がかり。あることばか、みんなで確かめよう。`;
     if (assessment.reason === 'name_caution') return '名前や専門用語かもしれないよ。知らないだけではセーフにせず、みんなで確認しよう。';
-    return 'どの観点でも、既存のことばの強い手がかりは見つからなかったよ。';
+    return '既存のことば・つぎはぎ・文章の強い手がかりは見つからなかったよ。';
   }
   function validSounds(value) { return Boolean(value && SOUNDS.includes(value.first) && SOUNDS.includes(value.last)); }
   function cleanWord(value) {
@@ -171,5 +182,5 @@
     }
     return -1;
   }
-  root.NaimonoCore = Object.freeze({ cleanWord, toHiragana, readingFor, firstSound, lastSound, validateWord, checkTurn, fromNoul, demoJudge, nextActive, SOUNDS, CATEGORIES, categoryFor, validSounds, FLAVORS, flavorFor, PERSPECTIVES, JUDGMENT_POLICY, unitScore, assessExistence, assessmentMessage });
+  root.NaimonoCore = Object.freeze({ cleanWord, toHiragana, readingFor, firstSound, lastSound, validateWord, checkTurn, fromNoul, demoJudge, nextActive, SOUNDS, CATEGORIES, categoryFor, validSounds, FLAVORS, flavorFor, PERSPECTIVES, COMPOUND_PERSPECTIVE, SENTENCE_PERSPECTIVE, JUDGMENT_POLICY, unitScore, assessExistence, assessmentMessage });
 })(globalThis);

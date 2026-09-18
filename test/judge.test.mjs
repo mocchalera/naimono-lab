@@ -4,7 +4,7 @@ import { buildRequest, judgeWord, parseResponse, MODEL_ID, QUESTION_KEY } from '
 import {jevResponse, evidenceIds} from './jev-fixture.mjs';
 
 const valid = noul => ({...jevResponse(noul),model:'jev-1.13.0'});
-const questionIds = [...evidenceIds,'name_risk','category','flavor'];
+const questionIds = [...evidenceIds,'name_risk','compound','sentence','category','flavor'];
 
 test('request uses the Workers AI model and documented typed Noul response shape', async () => {
   let calls = 0;
@@ -18,6 +18,8 @@ test('request uses the Workers AI model and documented typed Noul response shape
     assert.equal(input.questions.name_risk.type,'score');
     assert.equal(input.questions.name_risk.criteria.length,5);
     assert.equal(input.questions.category.type,'choice');
+    assert.equal(input.questions.compound.type,'noul');
+    assert.equal(input.questions.sentence.type,'noul');
     return {answers:{...valid(.1).answers,category:{type:'choice',choice:'animal'}}};
   } };
   const result = await judgeWord({word:'もにゅらっぴ'}, {ai});
@@ -76,8 +78,18 @@ test('classification and imagined sound personality do not affect existence',() 
   assert.equal(parseResponse(jevResponse(.1,{flavor:{type:'choice',choice:'<script>'}})).flavor,null);
 });
 
+test('compound and sentence violations do not assert real-world existence',() => {
+  for (const [id,field,label] of [['compound','compoundRisk','つぎはぎ'],['sentence','sentenceRisk','文章']]) {
+    const result = parseResponse(jevResponse(.02,{[id]:{type:'noul',noul:.96}}));
+    assert.equal(result.status,'out'); assert.equal(result.assessment.reason,id);
+    assert.equal(result.assessment[field],.96); assert.equal(result.assessment.existenceScore,.02);
+    assert.equal(result.probability,.96); assert.match(result.message,new RegExp(label));
+    assert.equal(parseResponse(jevResponse(.02,{[id]:{type:'noul',noul:.6}})).assessment.reason,`possible_${id}`);
+  }
+});
+
 test('missing or malformed perspectives cannot silently become a safe result',() => {
-  for (const id of evidenceIds) {
+  for (const id of [...evidenceIds,'compound','sentence']) {
     for (const answer of [undefined,null,{type:'choice',choice:'safe'},{type:'noul',noul:'0.1'},{type:'noul',noul:-.1},{type:'noul',noul:1.1}]) {
       assert.throws(() => parseResponse(jevResponse(.1,{[id]:answer})),error => error.code === 'INVALID_RESPONSE');
     }

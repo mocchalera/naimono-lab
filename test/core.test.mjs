@@ -100,24 +100,41 @@ test('Noul threshold policy is conservative and validates all boundaries',() => 
 });
 test('multi-angle judgment uses the strongest recognition, never a mean or summed probability',() => {
   const low = Object.fromEntries(C.PERSPECTIVES.map(view => [view.id,.02]));
-  const result = C.assessExistence({...low,names:.9},.7);
+  const result = C.assessExistence({...low,names:.9},.7,0,0);
   assert.equal(result.status,'out'); assert.equal(result.score,.9); assert.equal(result.strongest,'names');
   const allMedium = Object.fromEntries(C.PERSPECTIVES.map(view => [view.id,.4]));
-  assert.equal(C.assessExistence(allMedium,.1).status,'review');
-  assert.equal(C.assessExistence(allMedium,.1).score,.4);
-  assert.equal(C.assessExistence(low,.8).status,'review');
-  assert.equal(C.assessExistence(low,.1).status,'safe');
-  assert.equal(C.assessExistence({...low,exists:.95,names:.95},.7).strongest,'names');
+  assert.equal(C.assessExistence(allMedium,.1,0,0).status,'review');
+  assert.equal(C.assessExistence(allMedium,.1,0,0).score,.4);
+  assert.equal(C.assessExistence(low,.8,0,0).status,'review');
+  assert.equal(C.assessExistence(low,.1,0,0).status,'safe');
+  assert.equal(C.assessExistence({...low,exists:.95,names:.95},.7,0,0).strongest,'names');
 });
 test('multi-angle boundaries and ambiguous-name guard are explicit and monotonic',() => {
   const scores = Object.fromEntries(C.PERSPECTIVES.map(view => [view.id,0]));
   for (const [score,risk,status] of [[.2,.44999,'safe'],[.20001,0,'review'],[.84999,0,'review'],[.85,0,'out'],[0,.45,'review'],[.99,1,'out']]) {
-    assert.equal(C.assessExistence({...scores,specialist:score},risk).status,status,`${score}/${risk}`);
+    assert.equal(C.assessExistence({...scores,specialist:score},risk,0,0).status,status,`${score}/${risk}`);
   }
   for (const bad of [undefined,null,'0.1',NaN,Infinity,-.1,1.01]) {
-    assert.throws(() => C.assessExistence({...scores,culture:bad},.1));
-    assert.throws(() => C.assessExistence(scores,bad));
+    assert.throws(() => C.assessExistence({...scores,culture:bad},.1,0,0));
+    assert.throws(() => C.assessExistence(scores,bad,0,0));
+    assert.throws(() => C.assessExistence(scores,.1,bad,0));
+    assert.throws(() => C.assessExistence(scores,.1,0,bad));
   }
+});
+test('word-form checks guard compounds and sentences without turning familiar fragments into existence',() => {
+  const low = Object.fromEntries(C.PERSPECTIVES.map(view => [view.id,.02]));
+  for (const [risk,status,reason] of [[0,'safe','unrecognized'],[.44999,'safe','unrecognized'],[.45,'review','possible_'],[.84999,'review','possible_'],[.85,'out',''],[1,'out','']]) {
+    for (const id of ['compound','sentence']) {
+      const result = C.assessExistence(low,.1,id === 'compound' ? risk : .01,id === 'sentence' ? risk : .01);
+      assert.equal(result.status,status); assert.equal(result.reason,status === 'safe' ? reason : reason+id);
+      assert.equal(result.existenceScore,.02); assert.equal(result.score,Math.max(.02,risk));
+    }
+  }
+  assert.equal(C.assessExistence(low,.1,.93,.98).reason,'sentence');
+  assert.equal(C.assessExistence({...low,names:.99},.1,.93,.98).reason,'recognized');
+  const mildCompound = C.assessExistence({...low,names:.3},.1,.4,.1);
+  assert.equal(mildCompound.reason,'possible_match'); assert.match(C.assessmentMessage(mildCompound),/バンド・人名/);
+  assert.equal(C.assessExistence(low,.8,.3,.1).reason,'name_caution');
 });
 test('demo dictionary does not pretend that unknown words are nonexistent',() => {
   const result = C.demoJudge('もにゅらっぴ');

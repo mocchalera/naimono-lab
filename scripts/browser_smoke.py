@@ -161,8 +161,9 @@ with sync_playwright() as p:
         window.mockCalls.push(JSON.parse(opts.body));
         if(window.mockStatus==='error') return {ok:false,json:async()=>({error:'テスト用の接続エラー。負けにはなりません。'})};
         const defaultScores = {exists:window.mockStatus==='safe'?0.1:window.mockStatus==='out'?0.97:0.5,everyday:.01,names:.02,culture:.03,places_products:.01,specialist:.02,variants:.01};
-        const assessment = window.mockAssessment || {scores:defaultScores,nameRisk:.1};
-        return {ok:true,json:async()=>({status:window.mockStatus,source:'jev',probability:Math.max(...Object.values(assessment.scores)),assessment,message:'テスト用Jev回答',category:window.mockCategory,sounds:window.mockSounds,flavor:window.mockFlavor})};
+        const supplied = {compoundRisk:.01,sentenceRisk:.01,...(window.mockAssessment || {scores:defaultScores,nameRisk:.1})};
+        const assessment = NaimonoCore.assessExistence(supplied.scores,supplied.nameRisk,supplied.compoundRisk,supplied.sentenceRisk);
+        return {ok:true,json:async()=>({status:window.mockStatus,source:'jev',probability:assessment.score,assessment,message:'テスト用Jev回答',category:window.mockCategory,sounds:window.mockSounds,flavor:window.mockFlavor})};
       };
     }"""
     live_html = HTML.replace('globalThis.NAIMONO_STANDALONE = true;','globalThis.NAIMONO_STANDALONE = false;')
@@ -173,7 +174,7 @@ with sync_playwright() as p:
     check('The referee reacts to the Jev category and flavor beside the score','動物っぽい！' in page.locator('.referee-bubble').inner_text() and 'ふわふわの予感！' in page.locator('.referee-bubble').inner_text())
     check('The overall score is visible while all details start collapsed',page.locator('.judgment-total').is_visible() and page.locator('.judgment-total strong').inner_text()=='10' and not page.locator('.score-list').is_visible() and not page.locator('.name-caution').is_visible() and page.locator('.score-details').get_attribute('open') is None)
     page.locator('.score-details summary').focus(); page.keyboard.press('Enter')
-    check('Keyboard opens all seven perspectives and name caution',page.locator('.score-list .score-row').count()==7 and page.locator('.name-caution').is_visible())
+    check('Keyboard opens seven recognition scores, compound, sentence and name caution',page.locator('.score-list .score-row').count()==9 and page.locator('.name-caution').is_visible())
     check('The actual decision thresholds are visible','85以上' in page.locator('.score-policy').inner_text() and '45未満' in page.locator('.score-policy').inner_text())
     page.keyboard.press('Space')
     check('Keyboard closes details without hiding the score',not page.locator('.score-list').is_visible() and page.locator('.judgment-total').is_visible())
@@ -329,6 +330,24 @@ with sync_playwright() as p:
     page.locator('.score-details summary').click()
     check('Score accordion remains usable with reduced motion',page.locator('.score-list').is_visible())
     page.close()
+
+    for kind,word,title,button in [('compound','宇宙バナナ','ことばの、つぎはぎ！','ことばのつぎはぎ！'),('sentence','ねこが空を飛ぶ','文章に、なってる！','文章になってる！')]:
+        for width in [320,390,1360]:
+            page = new_page(width=width,height=844,html=live_html,setup=combined_setup)
+            page.evaluate(f"window.mockStatus='out'; window.mockAssessment={{scores:{{exists:.02,everyday:.01,names:.01,culture:.01,places_products:.01,specialist:.01,variants:.01}},nameRisk:.1,{kind}Risk:.96}}")
+            start(page); answer(page,word)
+            check(f'{kind} violation has its own title and overall score at {width}px',page.locator('.verdict-title').inner_text()==title and page.locator('.judgment-total strong').inner_text()=='96' and not page.locator('.score-list').is_visible())
+            check(f'{kind} result fits at {width}px',page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+            if width==390: page.locator('#arena').screenshot(path=str(OUT/f'{kind}-mobile.png'),animations='disabled')
+            page.locator('.score-details summary').click()
+            check(f'{kind} rule score is separate from recognition at {width}px',page.locator(f'[data-score="{kind}"] dd>span').inner_text()=='96' and page.locator('[data-score="exists"] dd>span').inner_text()=='2')
+            page.locator('[data-verdict="appeal"]').click()
+            check(f'{kind} appeal names the rule without claiming existence at {width}px',button in page.locator('[data-verdict="out"]').inner_text())
+            page.locator('[data-verdict="safe"]').click()
+            check(f'{kind} override preserves the original scores at {width}px',page.locator('.manual-score-note').is_visible() and page.locator('.judgment-total strong').inner_text()=='96')
+            page.locator('[data-verdict="next"]').click()
+            check(f'{kind} override can continue play at {width}px',page.locator('#collection-count').inner_text()=='01')
+            page.close()
 
     samples = [
         {'word':'雲ぷる餅','category':'food'}, {'word':'しゅわ星ゼリー','category':'food'},
