@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f3e9">
+  <meta name="description" content="この世にないことばを、順番に言ってみよう。家族で遊ぶ、へんてこことば発見ゲーム。">
+  <title>ナイモノ研究所 — この世にないことばで、あそぼう。</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="core.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="13" rx="4"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3Z"/></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 4 5 9H2v6h3l6 5Zm5 4a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 4 5 9H2v6h3l6 5Zm5 5 6 6m0-6-6 6"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M20 12H5m6-6-6 6 6 6"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 2.7 6.3L22 9l-5.5 4.8 1.7 7.2L12 17.3 5.8 21l1.7-7.2L2 9l7.3-.7Z"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="5"/><path d="m12 12 9 9m-3-3 3-3m-6 0 3-3"/></symbol>
+      <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 9h1m4 0h1m4 0h1M6 12h1m4 0h1m4 0h1M7 16h10"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></symbol>
+      <symbol id="creature-green" viewBox="0 0 240 250">
+        <ellipse cx="122" cy="230" rx="76" ry="9" fill="#26392b" opacity=".1"/>
+        <path d="m62 161-30 15m145-21 31-25" stroke="#27372e" stroke-width="9" stroke-linecap="round"/>
+        <path d="M51 211V100c0-40 24-67 68-67s71 27 71 67v111l-22-13-25 20-23-17-23 17-24-17Z" fill="#c4eb6b" stroke="#27372e" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M83 60q13-11 24-10" fill="none" stroke="#e6ffb8" stroke-width="10" stroke-linecap="round"/>
+        <path d="m105 33-3-16 15 7 6-18 11 20 13-6-2 15" fill="#fbaf75" stroke="#27372e" stroke-width="4" stroke-linejoin="round"/>
+        <ellipse cx="98" cy="115" rx="7" ry="11" fill="#27372e"/>
+        <ellipse cx="145" cy="115" rx="7" ry="11" fill="#27372e"/>
+        <circle cx="146" cy="116" r="23" fill="none" stroke="#27372e" stroke-width="4"/>
+        <path d="M169 120v46" fill="none" stroke="#27372e" stroke-width="3"/>
+        <path d="M108 145q11 13 24-2" fill="none" stroke="#27372e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="82" cy="136" rx="11" ry="6" fill="#a9d557"/><ellipse cx="155" cy="140" rx="9" ry="5" fill="#a9d557"/>
+      </symbol>
+      <symbol id="creature-pink" viewBox="0 0 240 250">
+        <ellipse cx="120" cy="230" rx="72" ry="9" fill="#26392b" opacity=".1"/>
+        <path d="m93 204-14 23m64-21 14 21" stroke="#27372e" stroke-width="8" stroke-linecap="round"/>
+        <path d="M52 145C25 110 47 65 78 71c-4-49 48-59 65-14 37-24 66 16 47 46 46 26 39 77-8 88-15 44-67 52-94 17-31 16-68-24-36-63Z" fill="#efb3c7" stroke="#27372e" stroke-width="5"/>
+        <path d="M97 63q-7-12-13 2" fill="none" stroke="#ffe5ed" stroke-width="9" stroke-linecap="round"/>
+        <ellipse cx="99" cy="123" rx="6" ry="10" fill="#27372e"/><ellipse cx="146" cy="123" rx="6" ry="10" fill="#27372e"/>
+        <path d="m89 102 18 2m29 0 18-6M111 151q9-9 19 0" fill="none" stroke="#27372e" stroke-width="4" stroke-linecap="round"/>
+        <path d="m50 172-22 7m162-10 25 8" stroke="#27372e" stroke-width="7" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="creature-blue" viewBox="0 0 240 250">
+        <ellipse cx="120" cy="230" rx="71" ry="9" fill="#26392b" opacity=".1"/>
+        <path d="m81 204-12 23m89-23 10 23" stroke="#27372e" stroke-width="8" stroke-linecap="round"/>
+        <path d="M48 171 86 52q6-14 17-1l21 26 25-24q12-10 17 4l31 122q6 30-20 34H70q-34-1-22-42Z" fill="#b8c9f3" stroke="#27372e" stroke-width="5" stroke-linejoin="round"/>
+        <path d="m80 96 13-33" stroke="#e1eaff" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="101" cy="139" r="10" fill="#fffdf4" stroke="#27372e" stroke-width="3"/><circle cx="145" cy="139" r="10" fill="#fffdf4" stroke="#27372e" stroke-width="3"/>
+        <circle cx="104" cy="141" r="4" fill="#27372e"/><circle cx="143" cy="141" r="4" fill="#27372e"/>
+        <path d="M116 166h13" stroke="#27372e" stroke-width="5" stroke-linecap="round"/>
+        <path d="m53 157-22-11m159 9 23-7" stroke="#27372e" stroke-width="7" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="creature-orange" viewBox="0 0 240 250">
+        <ellipse cx="120" cy="230" rx="71" ry="9" fill="#26392b" opacity=".1"/>
+        <path d="m79 202-8 25m86-26 13 26" stroke="#27372e" stroke-width="8" stroke-linecap="round"/>
+        <path d="M52 115q-16-19-7-35l20 7C71 41 110 22 148 46l14-17 18 44q37 23 27 74t-48 63H87q-41-12-35-95Z" fill="#f6b37b" stroke="#27372e" stroke-width="5" stroke-linejoin="round"/>
+        <ellipse cx="97" cy="126" rx="6" ry="10" fill="#27372e"/><ellipse cx="146" cy="126" rx="6" ry="10" fill="#27372e"/>
+        <path d="M107 154q15 16 29-1M66 174l-29 6m163-6 17-20" stroke="#27372e" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M83 76q15-21 30-16" stroke="#ffd8aa" stroke-width="9" stroke-linecap="round" fill="none"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="site-wrap">
+    <header class="site-header">
+      <a class="brand" href="#" id="home-link" aria-label="ナイモノ研究所 ホーム">
+        <svg class="brand-creature" aria-hidden="true"><use href="#creature-green"/></svg>
+        <span><span class="brand-en">NAIMONO LAB.</span><span class="brand-jp">ナイモノ研究所</span></span>
+      </a>
+      <nav class="header-nav" aria-label="メニュー">
+        <button class="icon-button" id="sound-button" aria-label="効果音をオンにする" aria-pressed="false"><svg class="icon"><use href="#i-mute"/></svg></button>
+        <button class="notebook-button" id="gallery-button"><svg class="icon"><use href="#i-book"/></svg><span>ずかん</span><b id="collection-count">00</b></button>
+        <button class="icon-button help-button" id="help-button" aria-label="あそびかた">?</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="home-screen" class="home-screen" aria-labelledby="home-title">
+        <div class="intro">
+          <div class="eyebrow"><span class="tiny-star">✳</span> へんてこことば、発見ゲーム。</div>
+          <h1 id="home-title"><span class="title-kicker">この世にないって、</span><span class="title-main">おもしろい<span class="title-period">。</span></span></h1>
+          <p class="intro-copy">「ぽにょらぺ」「むぎゅぽっこ」<br>まだだれも知らない、ことばを言ってみよう。<br><strong>あることばを言ったら、まけ！</strong></p>
+          <div class="world-stage" aria-hidden="true">
+            <span class="doodle doodle-star">✳</span><span class="doodle doodle-orbit">+</span>
+            <span class="speech-sticker sticker-left">もにゅらっぴ！</span>
+            <span class="speech-sticker sticker-right">それ、ナイかも。</span>
+            <div class="creature-home creature-home-pink"><svg viewBox="0 0 240 250"><use href="#creature-pink"/></svg></div>
+            <div class="creature-home creature-home-green"><svg viewBox="0 0 240 250"><use href="#creature-green"/></svg><span class="scientist-label">しんぱんの ナイ博士</span></div>
+            <div class="creature-home creature-home-blue"><svg viewBox="0 0 240 250"><use href="#creature-blue"/></svg></div>
+            <span class="stage-caption">ないもの、あつめています。</span>
+          </div>
+          <div class="intro-foot"><span class="mini-dot"></span> スマホ1台で、みんなと。 <span>2〜4人</span><span>文字でも音声でも</span></div>
+        </div>
+
+        <section class="setup-sheet" aria-labelledby="setup-title">
+          <div class="sheet-heading"><span class="sheet-index">EXPERIMENT 01</span><span class="lab-stamp">あそぼう！</span></div>
+          <h2 id="setup-title">きょうは、どう遊ぶ？</h2>
+          <fieldset class="mode-fieldset"><legend>あそびかた</legend>
+            <div class="mode-options">
+              <label class="mode-option"><input type="radio" name="mode" value="free" checked><span class="mode-art">?<i>!</i></span><strong>なんでも</strong><small>ないことばなら OK</small><span class="selection-check">✓</span></label>
+              <label class="mode-option"><input type="radio" name="mode" value="shiritori"><span class="mode-art shiri-art">あ<span>→</span>い</span><strong>しりとり</strong><small>さいごの音でつなぐ</small><span class="selection-check">✓</span></label>
+            </div>
+          </fieldset>
+          <div class="setup-row"><label for="player-count">あそぶ人数</label><div class="stepper"><button id="players-minus" aria-label="人数を減らす" type="button">−</button><output id="player-count">2<span>人</span></output><button id="players-plus" aria-label="人数を増やす" type="button">+</button></div></div>
+          <div id="player-names" class="player-name-grid"></div>
+          <fieldset class="time-fieldset"><legend><svg class="icon"><use href="#i-clock"/></svg> 考えるじかん</legend><div class="time-options"><label><input type="radio" name="time" value="0"><span>ゆっくり</span></label><label><input type="radio" name="time" value="10" checked><span>10秒</span></label><label><input type="radio" name="time" value="20"><span>20秒</span></label></div></fieldset>
+          <button class="primary-button start-button" id="start-button"><span>はっけん、はじめる！</span><svg class="icon"><use href="#i-arrow"/></svg></button>
+          <button class="judge-badge" id="judge-badge"><span class="status-dot"></span><span id="judge-label">審判を確認中…</span><svg class="icon"><use href="#i-key"/></svg></button>
+          <p class="setup-note" id="setup-note">準備しています。</p>
+        </section>
+      </section>
+
+      <section id="play-screen" class="play-screen" hidden aria-labelledby="turn-title">
+        <div class="game-topbar"><button class="text-button" id="exit-button"><svg class="icon"><use href="#i-back"/></svg> もどる</button><span class="game-mode" id="game-mode"></span><span class="game-round" id="turn-count">TURN 01</span></div>
+        <div id="players-strip" class="players-strip" aria-label="プレイヤー"></div>
+        <div class="play-grid">
+          <section class="arena" id="arena">
+            <div class="arena-topline"><span class="phase-badge" id="phase-badge">じゅんび OK？</span><div class="timer" id="timer" aria-label="考える時間"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="timer-track" cx="32" cy="32" r="28"/><circle class="timer-progress" cx="32" cy="32" r="28"/></svg><span id="timer-value">10</span></div></div>
+            <div id="input-stage">
+              <h2 id="turn-title">あおさんの ばん！</h2>
+              <p id="turn-prompt" class="turn-prompt">この世にないことばを、ひとつ。</p>
+              <div class="lab-scene"><span class="lab-message" id="lab-message">でたらめで、だいじょうぶ。</span><svg id="judge-creature" viewBox="0 0 240 250" aria-hidden="true"><use href="#creature-green"/></svg><span class="lab-floor"></span><span class="lab-spark spark-one">✳</span><span class="lab-spark spark-two">+</span></div>
+              <form id="word-form" autocomplete="off">
+                <label class="sr-only" for="word-input">答えることば</label>
+                <div class="word-input-wrap"><input type="text" id="word-input" placeholder="どんな ことば？" maxlength="48" spellcheck="false" autocapitalize="off" enterkeyhint="done"><button type="button" id="mic-button" class="mic-button" aria-label="音声で答える"><svg class="icon"><use href="#i-mic"/></svg></button></div>
+                <div id="reading-wrap" hidden><label for="reading-input">しりとりの読み</label><input id="reading-input" type="text" placeholder="ひらがな・カタカナ" maxlength="40" spellcheck="false"></div>
+                <p id="input-hint" class="input-hint">文字を入力するか、マイクを押すとスタート。</p>
+                <p id="form-error" class="form-error" role="alert" hidden></p>
+                <button type="submit" class="primary-button" id="submit-button">このことばで、判定！<svg class="icon"><use href="#i-arrow"/></svg></button>
+              </form>
+              <button class="text-button concede-button" id="concede-button">うーん、思いつかない…</button>
+            </div>
+            <div id="judging-stage" class="judging-stage" hidden aria-live="polite"><svg viewBox="0 0 240 250" aria-hidden="true"><use href="#creature-green"/></svg><div class="search-dots"><i></i><i></i><i></i></div><h2>それって、あるっけ？</h2><p id="judging-word"></p><small>しんぱん中は、じかんが止まるよ。</small></div>
+            <div id="verdict-stage" class="verdict-stage" hidden aria-live="polite"></div>
+          </section>
+          <aside class="session-notebook"><div class="notebook-heading"><svg class="icon"><use href="#i-book"/></svg><h3>きょうのナイモノ</h3><span id="session-count">00</span></div><div id="session-history" class="session-history"><div class="empty-notebook"><span>?</span><p>まだ、まっしろ。<br>さいしょの発見は、だれかな？</p></div></div><div class="notebook-bottom"><span>しんぱんメモ</span><p id="judge-note">おためし辞書であそんでいます。</p></div></aside>
+        </div>
+      </section>
+
+      <section id="finish-screen" class="finish-screen" hidden aria-labelledby="finish-title">
+        <span class="finish-kicker">EXPERIMENT COMPLETE!</span><div class="winner-art" id="winner-art"></div><h1 id="finish-title"></h1><p id="finish-description"></p><div id="finish-words" class="finish-words"></div><button class="primary-button" id="again-button">もういっかい、あそぶ！<svg class="icon"><use href="#i-reset"/></svg></button><button class="text-button" id="finish-home">あそびかたを変える</button>
+      </section>
+    </main>
+    <footer class="site-footer"><span>ないものから、なにかが生まれる。</span><span>NAIMONO LAB. <b>小さな実験版</b></span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <dialog id="help-dialog" class="dialog"><div class="dialog-heading"><span class="eyebrow">HOW TO PLAY</span><button class="icon-button" data-close aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div><h2>ないことば、言えるかな？</h2><div class="help-steps"><p><b>01</b><span>順番に、<strong>この世にないことば</strong>を言おう。</span></p><p><b>02</b><span>あることばを言ったら、その人はおしまい。</span></p><p><b>03</b><span>さいごまで残った人が、ナイモノ名人！</span></p></div><div class="help-example"><span>もにゅらっぴ → ぴょこなも → もぐら</span><strong>「もぐら」は、あるね！</strong></div><h3>しりとりのやくそく</h3><p>さいごの音からつなぎます。「ん」で終わったら負け。同じことばも使えません。小さい文字は大きくしてつなぎます（「ゃ」→「や」）。最後の「ー」は飛ばします（「ぴょもー」→「も」）。濁点・半濁点はそのままです。</p><h3>「ある」のは、もの？ ことば？</h3><p>このゲームでは、<strong>すでに知られていることばや名前</strong>なら「ある」。だから「ドラゴン」や、有名なキャラクターの名前もアウトです。新しく作ったことば全体で判定します。</p><h3>まちがっても、だいじょうぶ。</h3><p>漢字・カタカナは、聞き取った文字のまま判定できます。聞きまちがいだけ直してね。Jev接続中は、しりとりの最初と最後の音も自動で確認。読みがわからないときだけ、よみかたを教えてね。時間は考えている間だけ。文字の確認・通信中は止まります。Jevは世界中を検索する辞書ではなく、間違えることもあります。「ちょっと待った！」から、みんなで判定を直せます。</p><p class="privacy-note">音声入力では、ブラウザの音声認識サービスへ音声が送られる場合があります。このアプリ自身は録音しません。Jevモードでは、確定したことば・読み・あそびかたをCloudflare Workers AI経由でJevへ送り、判定と分類を行います。図鑑はこのブラウザだけに保存し、いつでも消せます。プレイヤー名はサーバーへ送りません。</p></dialog>
+
+  <dialog id="settings-dialog" class="dialog"><div class="dialog-heading"><span class="eyebrow">REFEREE ROOM</span><button class="icon-button" data-close aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div><h2>しんぱんの おへや</h2><div class="settings-status" id="settings-status"></div><h3>Jevであそぶには</h3><p>Cloudflareにログインした状態で、WranglerからWorkers AI bindingを使います。TypeSafeのAPIキーをブラウザやソースに設定する必要はありません。</p><pre>npx wrangler dev</pre><p>公開するときは <code>npx wrangler deploy</code>。この画面のAPIは同じWorker内の <code>env.AI</code> からJevを呼びます。単体HTMLと <code>npm start</code> はおためし辞書です。</p><div class="notice-box"><strong>おためし版の判定について</strong><p>付属の小さな辞書にあることばはアウト。載っていないことばは、みんなで決めます。未知語をAIで調べたふりはしません。</p></div><p class="privacy-note">Jevの数値はモデルの判断であり、本当の「存在確率」ではありません。日本語の判定精度は実際の判定ログで確認します。誤判定は家族の合意で直してあそんでください。</p></dialog>
+
+  <dialog id="gallery-dialog" class="dialog gallery-dialog"><div class="dialog-heading"><span class="eyebrow">THE BOOK OF NAIMONO</span><button class="icon-button" data-close aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div><h2>みつけた、ナイモノ。</h2><p class="gallery-description">食べ物？ 動物？ だれかの名前？<br>Jevが「っぽい」で分ける、きみだけの図鑑。</p><p id="gallery-progress" class="gallery-progress" role="status"></p><div id="gallery-categories" class="gallery-categories" role="group" aria-label="図鑑のカテゴリー"></div><div id="gallery-grid" class="gallery-sections"></div><p class="gallery-note">分類はJevの想像だよ。以前の発見やJev未接続のときは「これから分類」に残るよ。このブラウザに最大60個まで保存します。</p><button class="text-button danger-text" id="clear-collection">図鑑の記録を消す</button></dialog>
+
+  <dialog id="confirm-dialog" class="dialog small-dialog"><div class="dialog-heading"><span class="eyebrow">ちょっと、かくにん。</span></div><h2 id="confirm-title"></h2><p id="confirm-message"></p><div class="dialog-actions"><button class="secondary-button" id="confirm-no">やめる</button><button class="primary-button" id="confirm-yes">OK</button></div></dialog>
+
+  <dialog id="mic-dialog" class="dialog small-dialog"><div class="dialog-heading"><span class="eyebrow">おうちの人と、かくにん。</span><button class="icon-button" data-close aria-label="閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div><h2>声で、ことばをいれよう。</h2><p>ブラウザの音声認識を使います。音声がブラウザ提供元のサービスに送られる場合があります。このアプリ自身は録音を保存しません。</p><p>漢字・カタカナも、そのまま送れます。聞きまちがいがあったときだけ、文字を直してね。文字入力だけでも遊べます。</p><button class="primary-button" id="mic-consent">音声入力をつかう<svg class="icon"><use href="#i-mic"/></svg></button></dialog>
+</body>
+</html>

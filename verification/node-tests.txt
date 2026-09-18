@@ -1,0 +1,194 @@
+
+> naimono-lab@0.1.0 test
+> node --test test/*.test.mjs
+
+TAP version 13
+# Subtest: normalizes half-width kana and voice-added punctuation
+ok 1 - normalizes half-width kana and voice-added punctuation
+  ---
+  duration_ms: 1.150195
+  type: 'test'
+  ...
+# Subtest: kana pronunciation cannot be replaced to cheat shiritori
+ok 2 - kana pronunciation cannot be replaced to cheat shiritori
+  ---
+  duration_ms: 0.375794
+  type: 'test'
+  ...
+# Subtest: final long vowel is skipped; final small kana is enlarged
+ok 3 - final long vowel is skipped; final small kana is enlarged
+  ---
+  duration_ms: 0.267992
+  type: 'test'
+  ...
+# Subtest: voicing is preserved rather than silently rewritten
+ok 4 - voicing is preserved rather than silently rewritten
+  ---
+  duration_ms: 0.576255
+  type: 'test'
+  ...
+# Subtest: rejects empty, Latin, markup, whitespace phrases, oversize and invalid readings
+ok 5 - rejects empty, Latin, markup, whitespace phrases, oversize and invalid readings
+  ---
+  duration_ms: 0.517667
+  type: 'test'
+  ...
+# Subtest: requests a kana reading for kanji only in shiritori mode
+ok 6 - requests a kana reading for kanji only in shiritori mode
+  ---
+  duration_ms: 0.178157
+  type: 'test'
+  ...
+# Subtest: free mode allows final n while shiritori loses on final n
+ok 7 - free mode allows final n while shiritori loses on final n
+  ---
+  duration_ms: 0.275504
+  type: 'test'
+  ...
+# Subtest: duplicate words normalize hiragana and katakana
+ok 8 - duplicate words normalize hiragana and katakana
+  ---
+  duration_ms: 0.183435
+  type: 'test'
+  ...
+# Subtest: correct shiritori opening is pending, incorrect is a rule out
+ok 9 - correct shiritori opening is pending, incorrect is a rule out
+  ---
+  duration_ms: 0.471077
+  type: 'test'
+  ...
+# Subtest: Noul threshold policy is conservative and validates all boundaries
+ok 10 - Noul threshold policy is conservative and validates all boundaries
+  ---
+  duration_ms: 0.655554
+  type: 'test'
+  ...
+# Subtest: demo dictionary does not pretend that unknown words are nonexistent
+ok 11 - demo dictionary does not pretend that unknown words are nonexistent
+  ---
+  duration_ms: 0.314522
+  type: 'test'
+  ...
+# Subtest: demo recognizes common kana, kanji and already named fictional things
+ok 12 - demo recognizes common kana, kanji and already named fictional things
+  ---
+  duration_ms: 1.385499
+  type: 'test'
+  ...
+# Subtest: demo checks the whole invented word, not merely a known part
+ok 13 - demo checks the whole invented word, not merely a known part
+  ---
+  duration_ms: 0.128543
+  type: 'test'
+  ...
+# Subtest: turns skip eliminated players and wrap around correctly
+ok 14 - turns skip eliminated players and wrap around correctly
+  ---
+  duration_ms: 0.167231
+  type: 'test'
+  ...
+# Subtest: request uses documented endpoint, Bearer auth and typed Noul response shape
+ok 15 - request uses documented endpoint, Bearer auth and typed Noul response shape
+  ---
+  duration_ms: 26.011501
+  type: 'test'
+  ...
+# Subtest: existing and uncertain model responses map to out and family review
+ok 16 - existing and uncertain model responses map to out and family review
+  ---
+  duration_ms: 0.847272
+  type: 'test'
+  ...
+# Subtest: API key is never passed to the state or instructions
+ok 17 - API key is never passed to the state or instructions
+  ---
+  duration_ms: 0.270005
+  type: 'test'
+  ...
+# Subtest: no key does not trigger a network request
+ok 18 - no key does not trigger a network request
+  ---
+  duration_ms: 0.490616
+  type: 'test'
+  ...
+# Subtest: invalid input never triggers a network request
+ok 19 - invalid input never triggers a network request
+  ---
+  duration_ms: 0.380531
+  type: 'test'
+  ...
+# Subtest: malformed model output is an error, never an automatic safe or loss
+ok 20 - malformed model output is an error, never an automatic safe or loss
+  ---
+  duration_ms: 1.369304
+  type: 'test'
+  ...
+# Subtest: upstream auth and rate-limit failures are sanitized without exposing the response body
+ok 21 - upstream auth and rate-limit failures are sanitized without exposing the response body
+  ---
+  duration_ms: 1.255774
+  type: 'test'
+  ...
+# Subtest: network and timeout failures are recoverable errors, not losses
+ok 22 - network and timeout failures are recoverable errors, not losses
+  ---
+  duration_ms: 0.425999
+  type: 'test'
+  ...
+# Subtest: serves local assets but not secrets or arbitrary filesystem paths
+ok 23 - serves local assets but not secrets or arbitrary filesystem paths
+  ---
+  duration_ms: 49.552894
+  type: 'test'
+  ...
+# Subtest: config exposes mode but never the key
+ok 24 - config exposes mode but never the key
+  ---
+  duration_ms: 6.940835
+  type: 'test'
+  ...
+# Subtest: demo route is explicitly demo and unknowns are review
+ok 25 - demo route is explicitly demo and unknowns are review
+  ---
+  duration_ms: 7.689247
+  type: 'test'
+  ...
+# Subtest: live route and bounded cache use Jev answers; duplicate requests reuse the result
+ok 26 - live route and bounded cache use Jev answers; duplicate requests reuse the result
+  ---
+  duration_ms: 5.771941
+  type: 'test'
+  ...
+# Subtest: cross-site and DNS-rebinding host requests are rejected
+ok 27 - cross-site and DNS-rebinding host requests are rejected
+  ---
+  duration_ms: 6.954746
+  type: 'test'
+  ...
+# Subtest: invalid content type, JSON, body size, fields and method are rejected
+ok 28 - invalid content type, JSON, body size, fields and method are rejected
+  ---
+  duration_ms: 11.083531
+  type: 'test'
+  ...
+# Subtest: per-client rate limit protects API calls
+ok 29 - per-client rate limit protects API calls
+  ---
+  duration_ms: 30.788118
+  type: 'test'
+  ...
+# Subtest: an unavailable provider does not become a demo answer or an out
+ok 30 - an unavailable provider does not become a demo answer or an out
+  ---
+  duration_ms: 3.597608
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 193.294888

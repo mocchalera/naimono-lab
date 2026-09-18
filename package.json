@@ -1,0 +1,17 @@
+{
+  "name": "naimono-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "この世にないことばで遊ぶ、家族のためのJev言葉ゲーム",
+  "engines": { "node": ">=22.0.0" },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "dev:worker": "npx wrangler dev",
+    "deploy": "npx wrangler deploy",
+    "test:jev": "node scripts/jev-fixtures.mjs"
+  }
+}
