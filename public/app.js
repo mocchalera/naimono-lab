@@ -7,6 +7,7 @@
   const creature = (name, cls = '') => `<svg class="${cls}" viewBox="0 0 240 250" aria-hidden="true"><use href="#creature-${name}"/></svg>`;
   const AVATARS = [ {name:'あおさん',avatar:'blue',color:'#b8c9f3'}, {name:'ももさん',avatar:'pink',color:'#efb3c7'}, {name:'だいだいさん',avatar:'orange',color:'#f6b37b'}, {name:'みどりさん',avatar:'green',color:'#c4eb6b'} ];
   const COLLECTION_KEY = 'naimono.collection.v1';
+  const MOTION_KEY = 'naimono.stopMotion';
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   let playerCount = 2, names = AVATARS.map(x => x.name);
   let phase = 'home', game = null, turnToken = 0;
@@ -17,15 +18,97 @@
   let audio = null, soundOn = false, toastTimer = null;
   let confirmCallback = null;
   let galleryCategory = 'all';
+  let motionStopped = false;
+  try { motionStopped = localStorage.getItem(MOTION_KEY) === 'true'; } catch {}
+  if (motionStopped) document.body.classList.add('stop-motion');
+  let visualObserver = null;
   const modalPauses = new WeakMap();
   let collection = loadCollection();
+
+  const motionPreference=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const reactionTimers=new Map();
+  function clearVisualReactions(){
+    for(const [svg,timer] of reactionTimers){clearTimeout(timer);svg.classList.remove('nm-reacting');}
+    reactionTimers.clear();
+  }
+  function isVisualShown(svg){
+    if(!svg.isConnected||document.hidden||svg.closest('[hidden]'))return false;
+    const dialog=svg.closest('dialog');return !dialog||dialog.open;
+  }
+  function setupVisualObserver(){
+    if(typeof IntersectionObserver!=='function')return;
+    visualObserver=new IntersectionObserver(entries=>{
+      for(const entry of entries)entry.target.classList.toggle('nm-paused',!entry.isIntersecting||!isVisualShown(entry.target));
+    },{threshold:0.02});
+  }
+  function observeVisuals(){
+    visualObserver?.disconnect();
+    for(const [svg,timer] of reactionTimers)if(!isVisualShown(svg)){
+      clearTimeout(timer);svg.classList.remove('nm-reacting');reactionTimers.delete(svg);
+    }
+    document.querySelectorAll('.nm-visual').forEach(svg=>{
+      svg.classList.add('nm-paused');if(!isVisualShown(svg))return;
+      if(visualObserver)visualObserver.observe(svg);
+      else{const rect=svg.getBoundingClientRect();svg.classList.toggle('nm-paused',rect.bottom<=0||rect.top>=innerHeight||rect.right<=0||rect.left>=innerWidth);}
+    });
+  }
+  function triggerVisualReaction(target){
+    const svg=target?.closest?.('.nm-visual[role="button"]');
+    if(!svg||motionStopped||motionPreference.matches||!isVisualShown(svg))return;
+    const previous=reactionTimers.get(svg);if(previous)clearTimeout(previous);
+    svg.classList.remove('nm-reacting');void svg.getBoundingClientRect();svg.classList.add('nm-reacting');
+    reactionTimers.set(svg,setTimeout(()=>{svg.classList.remove('nm-reacting');reactionTimers.delete(svg);},450));
+  }
+  function toggleMotion(){
+    motionStopped=!motionStopped;
+    try{localStorage.setItem(MOTION_KEY,String(motionStopped));}catch{}
+    document.body.classList.toggle('stop-motion',motionStopped);
+    clearVisualReactions();updateMotionButton();observeVisuals();
+  }
+  function updateMotionButton(){
+    const btn=$('motion-button');if(!btn)return;
+    btn.setAttribute('aria-pressed',String(motionStopped));
+    btn.setAttribute('aria-label',motionStopped?'動きを再開する':'動きをとめる');
+    btn.title=motionStopped?'動きを再開する':'動きをとめる';
+    $('motion-icon').textContent=motionStopped?'▶':'⏸';
+  }
+  function resolveEntryVisual(entry){
+    const V=globalThis.NaimonoVisual;if(!V)return null;
+    try{return V.sanitizeRecipe(entry.visual,entry.word,entry.reading||'',{category:entry.category,flavor:entry.flavor,origin:'local-rule'});}
+    catch{return null;}
+  }
+  function resolveVerdictVisual(value,word,reading){
+    const V=globalThis.NaimonoVisual;if(!V)return null;
+    try{
+      const saved=collection.find(entry=>C.toHiragana(entry.word)===C.toHiragana(word));
+      return(saved&&resolveEntryVisual(saved))||V.fromJudgment(word,reading,value);
+    }catch{return null;}
+  }
+  function discoveryDecision(entry){
+    return entry.source==='manual'?'みんなで決めたナイモノ':entry.decisionBy==='assistant'?'助っ人も確認したナイモノ':'Jevが知らないと判定';
+  }
 
   function loadCollection() {
     try {
       const data = JSON.parse(localStorage.getItem(COLLECTION_KEY) || '[]');
       if (!Array.isArray(data)) return [];
-      return data.filter(item => item && typeof item.word === 'string' && item.word.length <= 48 && ['blue','pink','orange','green'].includes(item.avatar) && ['jev','manual'].includes(item.source))
-        .slice(-60).map(item => ({word:item.word,reading:typeof item.reading === 'string' ? item.reading.slice(0,40) : '',source:item.source,avatar:item.avatar,date:typeof item.date === 'string' ? item.date : '',category:C.categoryFor(item.category)?.id || null,flavor:C.flavorFor(item.flavor)?.id || null}));
+      return data.filter(item => item && typeof item.word === 'string' && item.word.length <= 48 && ['blue','pink','orange','green'].includes(item.avatar) && ['jev','manual','assistant'].includes(item.source))
+        .slice(-60).map(item => {
+          const entry = {
+            word: item.word,
+            reading: typeof item.reading === 'string' ? item.reading.slice(0,40) : '',
+            source:item.source==='manual'?'manual':'jev',
+            decisionBy:item.source==='manual'?'manual':item.source==='assistant'||item.decisionBy==='assistant'?'assistant':'jev',
+            avatar: item.avatar,
+            date: typeof item.date === 'string' ? item.date : '',
+            category: C.categoryFor(item.category)?.id || null,
+            flavor: C.flavorFor(item.flavor)?.id || null
+          };
+          if (item.visual && typeof item.visual === 'object' && globalThis.NaimonoVisual?.validRecipe(item.visual, item.word)) {
+            entry.visual = globalThis.NaimonoVisual.sanitizeRecipe(item.visual, item.word, item.reading);
+          }
+          return entry;
+        });
     } catch { return []; }
   }
   function persistCollection() {
@@ -88,6 +171,7 @@
   }
 
   function setScreen(screen) {
+    queueMicrotask(observeVisuals);
     $('home-screen').hidden = screen !== 'home'; $('play-screen').hidden = screen !== 'play'; $('finish-screen').hidden = screen !== 'finish';
   }
   function stopClock() {
@@ -130,6 +214,7 @@
     $('mic-button').setAttribute('aria-label','音声で答える');
   }
   function cleanupTurn() {
+    clearVisualReactions();visualObserver?.disconnect();
     clearTimeout(judgingTimer); judgingTimer = null;
     stopClock(); stopRecognition(); requestController?.abort(); requestController = null;
     $('arena').querySelectorAll('.confetti').forEach(el => el.remove());
@@ -153,6 +238,7 @@
     $('players-strip').innerHTML = game.players.map((p,i) => `<div class="player-chip ${i === game.current && !p.out ? 'active' : ''} ${p.out ? 'eliminated' : ''}" style="--player-color:${p.color}" ${i === game.current ? 'aria-current="true"' : ''}>${creature(p.avatar)}<span><strong>${escapeHTML(p.name)}</strong><small>${p.out ? 'おやすみ' : i === game.current ? 'いま、あなたのばん' : 'じゅんばん待ち'}</small></span></div>`).join('');
   }
   function prepareTurn() {
+    queueMicrotask(observeVisuals);
     cleanupTurn(); turnToken++; phase = 'ready'; result = null; currentWord = null;
     remainingMs = game.seconds * 1000; lastBeep = null;
     $('input-stage').hidden = false; $('judging-stage').hidden = true; $('verdict-stage').hidden = true;
@@ -265,6 +351,17 @@
     return value ? `<span class="flavor-badge">語感は、${value.label}</span>` : '';
   }
   function refereeReaction(value, art) {
+    if (value.status === 'safe' && value.visualRecipe && globalThis.NaimonoVisual) {
+      const p = value.visualRecipe;
+      const category = C.categoryFor(value.category), flavor = C.flavorFor(value.flavor);
+      const originText = globalThis.NaimonoVisual.originLabel(p.origin);
+      const impressions = {
+        soft:'ふわふわの予感！', bold:'つよそうな響き！', mysterious:'ひみつがありそう！',
+        futuristic:'未来から来たみたい！', cheerful:'なんだか、ごきげん！', natural:'すっと、なじむ名前！'
+      };
+      const title = category ? category.id === 'other' ? 'ふしぎなものっぽい！' : `${category.label}！` : (flavor ? impressions[flavor.id] : 'ナイモノが生まれたよ！');
+      return `<div class="referee-reaction verdict-visual-wrap" data-impression="${category?.id || 'other'}">${globalThis.NaimonoVisual.render(p,{motion:true,reactive:true,className:'verdict-life'})}<div class="referee-bubble"><small>${escapeHTML(originText)}</small><strong><span class="referee-symbol" aria-hidden="true">${category?.symbol || '✳'}</span>${title}</strong>${category && flavor ? `<span class="referee-flavor">${impressions[flavor.id]}</span>` : ''}<span class="referee-caption">名前から想像したよ</span></div></div>`;
+    }
     const category = C.categoryFor(value.category), flavor = C.flavorFor(value.flavor);
     if (!category && !flavor) return creature(art,'verdict-art');
     const impressions = {
@@ -295,6 +392,7 @@
     return `<section class="judgment-panel" data-assessment="${assessment.status}" aria-label="Jevの判定スコア">${heading}<details class="score-details"><summary>どうして？ 判定の内訳</summary><p class="judgment-basis">実在の7観点と、つぎはぎ・文章をチェック。いちばん強い手がかりは「${strongest.label}」。</p><dl class="score-list">${C.PERSPECTIVES.map(view => row(view,assessment.scores[view.id])).join('')}${row(C.COMPOUND_PERSPECTIVE,assessment.compoundRisk)}${row(C.SENTENCE_PERSPECTIVE,assessment.sentenceRisk)}</dl><dl class="name-caution">${row({id:'name_risk',label:'名前かも',hint:'未知の固有名詞・専門語を見落としていない？'},assessment.nameRisk)}</dl><p class="score-policy">実在・つぎはぎ・文章のどれか${outAt*100}以上でアウト。実在が全部${safeAt*100}以下で、「名前かも」が${nameCautionAt*100}未満、つぎはぎ・文章も${structureReviewAt*100}未満ならセーフ。その間は助っ人にも確認し、争点が残るときはみんなで審議。</p>${helper}<p class="score-note">実在・つぎはぎ・文章のうち、いちばん高い値が総合スコア。つぎはぎ・文章判定は、実在するという意味ではありません。数値はJevの判断で、実在の確率や検索結果ではありません。</p></details>${manualNote}</section>`;
   }
   function showResult(value) {
+    queueMicrotask(observeVisuals);
     phase = 'verdict'; result = value;
     stopClock(); stopRecognition();
     $('arena').querySelectorAll('.confetti').forEach(el => el.remove());
@@ -302,6 +400,7 @@
     $('phase-badge').textContent = value.status === 'error' ? '接続を、かくにん' : value.status === 'review' ? 'みんなで、しんぱん' : 'はんてい結果';
     const word = currentWord?.word || '';
     const safe = value.status === 'safe', out = value.status === 'out', review = value.status === 'review', error = value.status === 'error';
+    if(safe)value.visualRecipe=resolveVerdictVisual(value,word,currentWord?.reading||'');
     const decisionReason = value.decisionReason || value.assessment?.reason;
     const compoundCheck = ['compound','possible_compound'].includes(decisionReason);
     const sentenceCheck = ['sentence','possible_sentence'].includes(decisionReason);
@@ -327,6 +426,7 @@
     const discussion = value.discussion;
     const discussionBox = value.source !== 'manual' && discussion?.prompt && (discussion.level === 'optional' || (discussion.level === 'required' && review)) ? `<aside class="discussion-box ${discussion.level}" aria-label="${discussion.level === 'required' ? 'みんなで審議' : 'おしゃべりのタネ'}"><strong>${discussion.level === 'required' ? 'みんなで、審議！' : 'おしゃべりのタネ'}</strong><p>${escapeHTML(discussion.prompt)}</p>${discussion.level === 'optional' ? '<small>お話ししながら、次へ進んでOK。</small>' : ''}</aside>` : '';
     $('verdict-stage').innerHTML = `${outcomeBadge}<div class="verdict-word">${escapeHTML(word)}</div><h2 class="verdict-title">${title}</h2>${refereeReaction(value,art)}${scores}<p class="verdict-message">${value.decisionBy === 'assistant' ? '<span class="assistant-badge">助っ人も確認！</span>' : ''}${escapeHTML(value.message)}</p>${discussionBox}${sounds}${value.meaning ? `<div class="meaning-box">${escapeHTML(value.meaning)}</div>` : ''}<div class="verdict-actions">${buttons}</div>`;
+    observeVisuals($('verdict-stage'));
     $('verdict-stage').querySelectorAll('[data-verdict]').forEach(button => button.addEventListener('click',() => handleVerdict(button.dataset.verdict)));
     if (safe) { chirp('safe'); confetti(); } else if (out) chirp('out');
   }
@@ -336,12 +436,13 @@
     if (action === 'retry') { judgeCurrent(); return; }
     if (action === 'edit') { editWord(); return; }
     if (action === 'appeal' || action === 'manual') {
-      showResult({...result,status:'review',source:'manual',meaning:null,message:'みんなが納得するほうを、選んでね。'}); return;
+      showResult({...result,status:'review',source:'manual',decisionBy:'manual',meaning:null,message:'みんなが納得するほうを、選んでね。'}); return;
     }
     if (action === 'safe' && !resolveCurrentSounds()) return;
-    if (action === 'safe' || action === 'out') showResult({...result,status:action,source:'manual',meaning:null,message:action === 'safe' ? 'みんなで、ないことばに決定！' : 'みんなで、アウトに決定。'});
+    if (action === 'safe' || action === 'out') showResult({...result,status:action,source:'manual',decisionBy:'manual',meaning:null,message:action === 'safe' ? 'みんなで、ないことばに決定！' : 'みんなで、アウトに決定。'});
   }
   function editWord() {
+    queueMicrotask(observeVisuals);
     $('verdict-stage').hidden = true; $('input-stage').hidden = false; $('judging-stage').hidden = true;
     $('submit-button').disabled = false; phase = 'confirm';
     $('phase-badge').textContent = 'ことばを、かくにん'; $('lab-message').textContent = '聞きまちがいは、直してね。';
@@ -354,11 +455,37 @@
     if (!['safe','out'].includes(result?.status)) return;
     const p = game.players[game.current];
     if (result.status === 'safe') {
-      const entry = {word:currentWord.word,reading:currentWord.reading,identity:currentWord.identity,source:result.source === 'jev' ? 'jev' : 'manual',avatar:p.avatar,date:new Date().toISOString(),category:C.categoryFor(result.category)?.id || null,flavor:C.flavorFor(result.flavor)?.id || null};
+      const source=result.source==='jev'?'jev':'manual';
+      const entry = {
+        word: currentWord.word,
+        reading: currentWord.reading,
+        identity: currentWord.identity,
+        source,
+        decisionBy:source==='manual'?'manual':result.decisionBy==='assistant'?'assistant':'jev',
+        avatar: p.avatar,
+        date: new Date().toISOString(),
+        category: C.categoryFor(result.category)?.id || null,
+        flavor: C.flavorFor(result.flavor)?.id || null
+      };
+      if (result.visualRecipe && globalThis.NaimonoVisual) {
+        entry.visual = globalThis.NaimonoVisual.sanitizeRecipe(result.visualRecipe, currentWord.word, currentWord.reading);
+      }
       game.history.push(entry);
       const existing = collection.find(x => (C.readingFor(x.word,x.reading) || C.toHiragana(x.word)) === entry.identity || C.cleanWord(x.word) === entry.word);
-      if (!existing) { collection.push(entry); collection = collection.slice(-60); persistCollection(); }
-      else if ((!existing.category && entry.category) || (!existing.flavor && entry.flavor)) { existing.category ||= entry.category; existing.flavor ||= entry.flavor; persistCollection(); }
+      if (!existing) {
+        collection.push(entry);
+        collection = collection.slice(-60);
+        persistCollection();
+      } else {
+        if ((!existing.category && entry.category) || (!existing.flavor && entry.flavor)) {
+          existing.category ||= entry.category;
+          existing.flavor ||= entry.flavor;
+        }
+        if (!existing.visual && entry.visual) {
+          existing.visual = entry.visual;
+        }
+        persistCollection();
+      }
       if (game.mode === 'shiritori') game.required = currentWord.sounds.last;
       renderHistory();
     } else p.out = true;
@@ -405,13 +532,14 @@
       stopRecognition(); phase = $('word-input').value.trim() ? 'confirm':'ready';
       $('input-hint').textContent = '音声入力を止めました。確認してから、続けてね。';
     }
-    modalPauses.set(dialog,{wasClock,token}); dialog.showModal();
+    modalPauses.set(dialog,{wasClock,token}); dialog.showModal();queueMicrotask(observeVisuals);
   }
   function askConfirm(title,message,yes,callback) {
     $('confirm-title').textContent = title; $('confirm-message').textContent = message; $('confirm-yes').textContent = yes;
     confirmCallback = callback; openModal('confirm-dialog');
   }
   function renderGallery() {
+    queueMicrotask(observeVisuals);
     const pending = {id:'unclassified',label:'これから分類',symbol:'?'};
     const groups = [...C.CATEGORIES,pending].map(category => ({...category,entries:collection.map((entry,index) => ({...entry,number:index+1})).filter(entry => (entry.category || 'unclassified') === category.id)}));
     const discovered = groups.filter(group => group.id !== 'unclassified' && group.entries.length).length;
@@ -421,7 +549,13 @@
     $('gallery-categories').innerHTML = filters.map(group => `<button type="button" class="category-filter ${group.entries.length ? 'discovered' : ''}" data-category="${group.id}" aria-pressed="${galleryCategory === group.id}"><span aria-hidden="true">${group.symbol}</span><span>${group.label}</span><b>${group.entries.length}</b></button>`).join('');
     $('clear-collection').hidden = !collection.length;
     const visible = groups.filter(group => galleryCategory === 'all' ? group.entries.length : group.id === galleryCategory);
-    $('gallery-grid').innerHTML = visible.length ? visible.map(group => `<section class="gallery-section" aria-labelledby="category-heading-${group.id}"><h3 id="category-heading-${group.id}" class="category-heading"><span aria-hidden="true">${group.symbol}</span>${group.label}<small>${group.entries.length}個 はっけん</small></h3><div class="gallery-grid">${group.entries.length ? group.entries.map(entry => `<article class="discovery-card"><small>NO. ${String(entry.number).padStart(3,'0')}</small>${creature(entry.avatar)}<h3>${escapeHTML(entry.word)}</h3>${categoryBadge(entry.category)}${flavorBadge(entry.flavor)}<span>${entry.source === 'jev' ? 'Jevが知らないと判定' : 'みんなで決めたナイモノ'}</span></article>`).join('') : '<p class="gallery-empty">このなかまは、まだ見つかっていないよ。<br>さいしょの発見は、どんな名前かな？</p>'}</div></section>`).join('') : '<p class="gallery-empty">まだ、まっしろな図鑑。<br>遊びながら、いろんななかまを集めよう。</p>';
+    $('gallery-grid').innerHTML = visible.length ? visible.map(group => `<section class="gallery-section" aria-labelledby="category-heading-${group.id}"><h3 id="category-heading-${group.id}" class="category-heading"><span aria-hidden="true">${group.symbol}</span>${group.label}<small>${group.entries.length}個 はっけん</small></h3><div class="gallery-grid">${group.entries.length ? group.entries.map(entry => {
+      const visualRecipe = resolveEntryVisual(entry);
+      const visualSvg = visualRecipe && globalThis.NaimonoVisual ? globalThis.NaimonoVisual.render(visualRecipe,{motion:true,reactive:true,className:'gallery-life'}) : creature(entry.avatar);
+      const originText = visualRecipe && globalThis.NaimonoVisual ? globalThis.NaimonoVisual.originLabel(visualRecipe.origin, entry.source === 'jev' ? 'Jevが知らないと判定' : 'みんなで決めたナイモノ') : (entry.source === 'jev' ? 'Jevが知らないと判定' : 'みんなで決めたナイモノ');
+      return `<article class="discovery-card"><small>NO. ${String(entry.number).padStart(3,'0')}</small>${visualSvg}<h3>${escapeHTML(entry.word)}</h3>${categoryBadge(entry.category)}${flavorBadge(entry.flavor)}<span class="visual-origin-note">${escapeHTML(originText)}</span><span class="discovery-decision">${discoveryDecision(entry)}</span></article>`;
+    }).join('') : '<p class="gallery-empty">このなかまは、まだ見つかっていないよ。<br>さいしょの発見は、どんな名前かな？</p>'}</div></section>`).join('') : '<p class="gallery-empty">まだ、まっしろな図鑑。<br>遊びながら、いろんななかまを集めよう。</p>';
+    observeVisuals($('gallery-grid'));
   }
   function startSpeech() {
     if (!game || !['ready','thinking','confirm'].includes(phase)) return;
@@ -508,6 +642,7 @@
       const pause = modalPauses.get(dialog); modalPauses.delete(dialog);
       if (pause?.wasClock && pause.token === turnToken && phase === 'thinking' && !document.querySelector('dialog[open]')) startClock();
       if (dialog.id === 'confirm-dialog') confirmCallback = null;
+      queueMicrotask(observeVisuals);
     });
     dialog.addEventListener('click',event => {
       if (event.target !== dialog) return;
@@ -516,6 +651,9 @@
     });
   });
   document.addEventListener('visibilitychange',() => {
+    document.body.classList.toggle('tab-hidden',document.hidden);
+    if(document.hidden)clearVisualReactions();
+    observeVisuals();
     if (document.hidden) {
       const active = ['ready','thinking','confirm'].includes(phase);
       stopClock(); stopRecognition(); audio?.suspend().catch(() => {});
@@ -528,5 +666,14 @@
   });
   window.addEventListener('pagehide',() => { cleanupTurn(); audio?.close().catch(() => {}); audio = null; });
 
-  renderNames(); updateCollectionCount(); updateSoundButton(); initConfig();
+  $('motion-button')?.addEventListener('click',toggleMotion);
+  document.addEventListener('click',event=>triggerVisualReaction(event.target));
+  document.addEventListener('keydown',event=>{
+    if(!event.repeat&&['Enter',' '].includes(event.key)&&event.target.closest?.('.nm-visual[role="button"]')){
+      event.preventDefault();triggerVisualReaction(event.target);
+    }
+  });
+  motionPreference.addEventListener('change',()=>{clearVisualReactions();observeVisuals();});
+  setupVisualObserver();
+  renderNames();updateCollectionCount();updateSoundButton();updateMotionButton();initConfig();
 })();

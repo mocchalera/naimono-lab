@@ -17,26 +17,114 @@ function hash(s){let h=2166136261;for(const c of s){h^=c.codePointAt(0);h=Math.i
 function rng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const f=n=>Number(n.toFixed(2));
-function ruleRecipe(raw){
- const word=normalize(raw),letters=Array.from(word),voiced=(word.match(/[がぎぐげござじずぜぞだぢづでどばびぶべぼ]/gu)||[]).length;
+function ruleRecipe(raw, reading = '', overrides = {}){
+ const word=normalize(raw);
+ let phoneticText = word;
+ if (typeof reading === 'string' && reading.trim()) {
+  try {
+   const normReading = reading.normalize('NFKC').trim().replace(/[ァ-ヶ]/gu,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+   if (/^[ぁ-ゖー]+$/u.test(normReading) && normReading.length<=40) phoneticText=normReading;
+  } catch {}
+ }
+ const letters=Array.from(phoneticText),voiced=(phoneticText.match(/[がぎぐげござじずぜぞだぢづでどばびぶべぼ]/gu)||[]).length;
  let shape='blob',material='mochi',expression='blank',detail='none',category='other',flavor='soft';
  let reason='丸い音と長さから、小さなかたまりを想像する仮ルール。';
- if(/ふわ|ふぁ|ほわ|ふる|ふぉ/.test(word)){shape='cloud';material='fluff';detail='tuft';expression='sleepy';category='animal';flavor='mysterious';reason='「ふわ」系の響き → 空気を含んだ輪郭、という仮ルール。';}
- else if(/ぬ|にょろ|るぉ|ろー|とろ/.test(word)){shape='ribbon';material='jelly';expression='sleepy';category='animal';flavor='mysterious';reason='ぬめる・のびる響き → 流れる細長い体、という仮ルール。';}
- else if(/ぴり|きゅる|きり|ちり|しゅ/.test(word)){shape='spark';material='paper';expression='curious';detail='antenna';category='move';flavor='cheerful';reason='ぴり・きゅるの響き → 小さくはじける形、という仮ルール。';}
- else if(/ぽむ|ぴっ|ぷっ|ぽこ/.test(word)){shape='cluster';material='mochi';expression='cheery';category='animal';flavor='cheerful';detail='sprinkles';reason='弾む短い音 → ちびっこが集まる形、という仮ルール。';}
- else if(/かぽ|こぽ|ねった|ぽっと|けっと/.test(word)){shape='vessel';material='ceramic';expression='blank';category='tool';flavor='natural';reason='カポッと空洞を感じる響き → 名前のない道具、という仮ルール。';}
- else if(/きゅり|りょり|にょき|りり/.test(word)){shape='sprout';material='leaf';detail='tuft';expression='curious';category='other';flavor='natural';reason='すっと伸びる響き → 葉っぱのような形、という仮ルール。';}
- else if(/ごる|がん|ぐど|だむ|どむ/.test(word)||voiced>=Math.max(2,letters.length*.30)){shape='boulder';material='stone';expression='blank';detail='ears';category='animal';flavor='bold';reason='重い濁音が続く響き → 低くて大きい体、という仮ルール。';}
- else if(/もに|にゅ|むに|ぷに|もち|ぽに/.test(word)){shape='blob';material='mochi';expression='sleepy';detail='antenna';category='food';flavor='soft';reason='もにゅ・ぷに系の響き → 押すと戻る形、という仮ルール。';}
+ if(/ふわ|ふぁ|ほわ|ふる|ふぉ/.test(phoneticText)){shape='cloud';material='fluff';detail='tuft';expression='sleepy';category='animal';flavor='mysterious';reason='「ふわ」系の響き → 空気を含んだ輪郭、という仮ルール。';}
+ else if(/ぬ|にょろ|るぉ|ろー|とろ/.test(phoneticText)){shape='ribbon';material='jelly';expression='sleepy';category='animal';flavor='mysterious';reason='ぬめる・のびる響き → 流れる細長い体、という仮ルール。';}
+ else if(/ぴり|きゅる|きり|ちり|しゅ/.test(phoneticText)){shape='spark';material='paper';expression='curious';detail='antenna';category='move';flavor='cheerful';reason='ぴり・きゅるの響き → 小さくはじける形、という仮ルール。';}
+ else if(/ぽむ|ぴっ|ぷっ|ぽこ/.test(phoneticText)){shape='cluster';material='mochi';expression='cheery';category='animal';flavor='cheerful';detail='sprinkles';reason='弾む短い音 → ちびっこが集まる形、という仮ルール。';}
+ else if(/かぽ|こぽ|ねった|ぽっと|けっと/.test(phoneticText)){shape='vessel';material='ceramic';expression='blank';category='tool';flavor='natural';reason='カポッと空洞を感じる響き → 名前のない道具、という仮ルール。';}
+ else if(/きゅり|りょり|にょき|りり/.test(phoneticText)){shape='sprout';material='leaf';detail='tuft';expression='curious';category='other';flavor='natural';reason='すっと伸びる響き → 葉っぱのような形、という仮ルール。';}
+ else if(/ごる|がん|ぐど|だむ|どむ/.test(phoneticText)||voiced>=Math.max(2,letters.length*.30)){shape='boulder';material='stone';expression='blank';detail='ears';category='animal';flavor='bold';reason='重い濁音が続く響き → 低くて大きい体、という仮ルール。';}
+ else if(/もに|にゅ|むに|ぷに|もち|ぽに/.test(phoneticText)){shape='blob';material='mochi';expression='sleepy';detail='antenna';category='food';flavor='soft';reason='もにゅ・ぷに系の響き → 押すと戻る形、という仮ルール。';}
  else {const tail=letters.at(-1);if(/[るりれ]/.test(tail)){shape='sprout';material='leaf';flavor='natural';expression='curious';reason='伸びる語尾 → 細い茎のある形、という仮ルール。';}else if(/[ぱぴぷぺぽ]/.test(letters[0])){shape='cluster';expression='cheery';flavor='cheerful';reason='弾む出だし → 小さい群れ、という仮ルール。';}}
  if(voiced&&shape==='blob'){flavor='bold';expression='blank';reason+=' 濁音ぶん、少しずっしり。';}
- return {version:VERSION,rendererVersion:VERSION,origin:'local-rule',word,seed:hash(word+'|'+VERSION),category,flavor,shape,material,expression,detail,roundness:shape==='boulder'?.22:shape==='spark'?.1:shape==='ribbon'?.82:.75,reason};
+
+ let origin='local-rule';
+ if(overrides && typeof overrides==='object'){
+  if(TYPES.includes(overrides.shape)) shape=overrides.shape;
+  if(MATERIALS.includes(overrides.material)) material=overrides.material;
+  if(EXPRESSIONS.includes(overrides.expression)) expression=overrides.expression;
+  if(DETAILS.includes(overrides.detail)) detail=overrides.detail;
+  if(CATEGORIES.includes(overrides.category)) category=overrides.category;
+  if(FLAVORS.includes(overrides.flavor)) flavor=overrides.flavor;
+  if(['local-rule','jev','referee','assistant','manual'].includes(overrides.origin)) origin=overrides.origin;
+  if(typeof overrides.reason==='string'&&overrides.reason.trim()) reason=overrides.reason.trim().slice(0,160);
+ }
+
+ const roundness=shape==='boulder'?.22:shape==='spark'?.1:shape==='ribbon'?.82:shape==='sprout'?.6:.75;
+ return {
+  version:VERSION,
+  rendererVersion:VERSION,
+  origin,
+  word,
+  seed:hash(word+'|'+VERSION),
+  category,
+  flavor,
+  shape,
+  material,
+  expression,
+  detail,
+  roundness,
+  reason
+ };
 }
-function validRecipe(r){
- if(!r||r.version!==VERSION||r.rendererVersion!==VERSION)return false;
- try{if(normalize(r.word)!==r.word)return false;}catch{return false;}
- return TYPES.includes(r.shape)&&MATERIALS.includes(r.material)&&EXPRESSIONS.includes(r.expression)&&DETAILS.includes(r.detail)&&CATEGORIES.includes(r.category)&&FLAVORS.includes(r.flavor)&&['local-rule','jev'].includes(r.origin)&&Number.isInteger(r.seed)&&r.seed>=0&&r.seed<=4294967295&&Number.isFinite(r.roundness)&&r.roundness>=0&&r.roundness<=1;
+function validRecipe(r, expectedWord = null){
+ if(!r||typeof r!=='object'||Array.isArray(r))return false;
+ if(r.version!==VERSION||r.rendererVersion!==VERSION)return false;
+ try{
+  if(normalize(r.word)!==r.word)return false;
+  if(expectedWord!==null&&expectedWord!==undefined){
+   if(normalize(expectedWord)!==r.word)return false;
+  }
+ }catch{return false;}
+ return TYPES.includes(r.shape)&&MATERIALS.includes(r.material)&&EXPRESSIONS.includes(r.expression)&&DETAILS.includes(r.detail)&&CATEGORIES.includes(r.category)&&FLAVORS.includes(r.flavor)&&['local-rule','jev','referee','assistant','manual'].includes(r.origin)&&Number.isInteger(r.seed)&&r.seed>=0&&r.seed<=4294967295&&Number.isFinite(r.roundness)&&r.roundness>=0&&r.roundness<=1&&typeof r.reason==='string'&&r.reason.length<=300;
+}
+function sanitizeRecipe(recipe, word, reading = '', overrides = {}){
+ if(validRecipe(recipe, word)){
+  return {
+   version:VERSION,
+   rendererVersion:VERSION,
+   origin:recipe.origin,
+   word:recipe.word,
+   seed:recipe.seed,
+   category:recipe.category,
+   flavor:recipe.flavor,
+   shape:recipe.shape,
+   material:recipe.material,
+   expression:recipe.expression,
+   detail:recipe.detail,
+   roundness:recipe.roundness,
+   reason:recipe.reason
+  };
+ }
+ return ruleRecipe(word, reading, overrides);
+}
+function originLabel(origin, defaultText = '語感からの仮スケッチ'){
+ switch(origin){
+  case 'jev': return 'Jevの語感スケッチ';
+  case 'referee':
+  case 'assistant': return '助っ人の想像';
+  case 'manual': return 'みんなで決めたスケッチ';
+  case 'local-rule': return '語感からの仮スケッチ';
+  default: return defaultText;
+ }
+}
+function sanitizeHints(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const result={};
+ for(const [key,allowed] of Object.entries({shape:TYPES,material:MATERIALS,expression:EXPRESSIONS,detail:DETAILS}))if(allowed.includes(value[key]))result[key]=value[key];
+ return Object.keys(result).length?result:null;
+}
+function fromJudgment(word,reading='',judgment={}){
+ let hints=null,origin='local-rule';
+ if(judgment.status==='safe'&&judgment.source==='jev'){
+  const assisted=judgment.decisionBy==='assistant'?sanitizeHints(judgment.fallback?.answer?.visual):null;
+  hints=assisted||sanitizeHints(judgment.visual);
+  if(hints)origin=assisted?'assistant':'jev';
+ }
+ const reason=origin==='local-rule'?undefined:origin==='assistant'?'助っ人の選択を手がかりにした、名前の想像スケッチ。':'Jevの選択を手がかりにした、名前の想像スケッチ。';
+ return ruleRecipe(word,reading,{...(hints||{}),category:judgment.category,flavor:judgment.flavor,origin,reason});
 }
 function shapePath(points,smooth=.65){
  const n=points.length;if(!smooth)return 'M'+points.map(p=>p.map(f).join(',')).join('L')+'Z';
@@ -45,7 +133,7 @@ function shapePath(points,smooth=.65){
  return d+'Z';
 }
 function ellipsePath(x,y,rx,ry,r,smooth=.9,n=12){const points=Array.from({length:n},(_,i)=>{const a=i/n*Math.PI*2,k=.94+r()*.11;return[x+Math.cos(a)*rx*k,y+Math.sin(a)*ry*k];});return shapePath(points,smooth);}
-function render(recipe,{motion=false}={}){
+function render(recipe,{motion=false,reactive=false,className=''}={}){
  if(!validRecipe(recipe))throw new TypeError('Unknown or malformed visual recipe.');
  const p=recipe,r=rng(p.seed),rnd=(a,b)=>a+r()*(b-a),[fill,accent]=PALETTES[p.flavor],sx=rnd(.96,1.05),tilt=rnd(-4,4),faceX=rnd(151,168),faceY=rnd(150,160),stroke=3.2;
  const draw=(d,color=fill,width=stroke)=>`<path d="${d}" fill="${color}" stroke="${INK}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -115,8 +203,12 @@ function render(recipe,{motion=false}={}){
  if(p.detail==='ears'&&!['boulder','vessel','spark'].includes(p.shape))back+=draw('M102,132Q69,65 98,66Q120,90 123,127Z',accent,2.7)+draw('M182,126Q196,76 211,85Q221,105 206,137Z',accent,2.7);
  if(p.detail==='tail'&&!['ribbon','vessel'].includes(p.shape))back+=line('M222,201q45,-4 37,-31q-11,-14 -21,2',2.7);
  const art=`<g transform="translate(160 159) rotate(${f(tilt)}) scale(${f(sx)} 1) translate(-160 -159)">${back}${body}${fore}${faceMarkup}</g>`;
- const style=motion?'<style>@media(prefers-reduced-motion:no-preference){.nm-life{transform-origin:160px 239px;animation:nm-breathe 3.8s ease-in-out infinite}@keyframes nm-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}}</style>':'';
- return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 280" role="img" aria-label="${escape(p.word)}の想像イラスト">${style}<title>${escape(p.word)} — 語感から想像したナイモノ</title><ellipse cx="161" cy="245" rx="${p.shape==='ribbon'?57:70}" ry="5" fill="#E5E4D7"/><g class="nm-life">${art}${effect}</g></svg>`;
+ const dur=(5.5+(p.seed%2000)/1000).toFixed(2),delay=(-((p.seed%4500)/1000)).toFixed(2);
+ const motionClass=motion?`nm-animating nm-motion-${p.shape}`:'';
+ const extra=typeof className==='string'?className.split(/\s+/u).filter(name=>/^[A-Za-z][A-Za-z0-9_-]{0,63}$/u.test(name)).join(' '):'';
+ const classes=['nm-visual',motionClass,extra].filter(Boolean).join(' ');
+ const semantics=reactive?`role="button" tabindex="0" aria-label="${escape(p.word)}をつつく"`:`role="img" aria-label="${escape(p.word)}の想像イラスト"`;
+ return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 280" class="${classes}" ${semantics}><title>${escape(p.word)} — 語感から想像したナイモノ</title><ellipse cx="161" cy="245" rx="${p.shape==='ribbon'?57:70}" ry="5" fill="#E5E4D7"/><g class="nm-life nm-shape-${p.shape}" style="--nm-dur:${dur}s;--nm-delay:${delay}s">${art}${effect}</g></svg>`;
 }
-const API=Object.freeze({VERSION,TYPES,MATERIALS,EXPRESSIONS,DETAILS,CATEGORIES,FLAVORS,LABELS,normalize,hash,ruleRecipe,validRecipe,render});root.NaimonoVisual=API;
+const API=Object.freeze({VERSION,TYPES,MATERIALS,EXPRESSIONS,DETAILS,CATEGORIES,FLAVORS,LABELS,normalize,hash,ruleRecipe,validRecipe,sanitizeRecipe,sanitizeHints,fromJudgment,originLabel,render});root.NaimonoVisual=API;
 })(globalThis);

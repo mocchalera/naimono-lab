@@ -128,3 +128,84 @@
   .outcome-badge,.judging-stage.extended-wait .judging-status{animation:none!important}
 }
 
+/* Naimono Visuals & Comical Motion System */
+.nm-visual{display:block;width:100%;height:auto;max-width:220px;margin:0 auto;user-select:none}
+.nm-visual:focus-visible{outline:3px solid #27372e;outline-offset:4px;border-radius:12px}
+.nm-life{transform-origin:160px 235px;transform-box:view-box}
+.nm-reacting .nm-life{animation:nm-tap-bounce .42s cubic-bezier(.34,1.56,.64,1)!important}
+@keyframes nm-tap-bounce{
+  0%{transform:scale(1,1)}
+  35%{transform:scale(1.12,.88) translateY(2px)}
+  65%{transform:scale(.94,1.08) translateY(-6px)}
+  85%{transform:scale(1.02,.98) translateY(1px)}
+  100%{transform:scale(1,1) translateY(0)}
+}
+.nm-animating.nm-motion-blob .nm-life{animation:nm-motion-blob-anim var(--nm-dur,6s) ease-in-out var(--nm-delay,0s) infinite}
+@keyframes nm-motion-blob-anim{
+  0%,68%,100%{transform:scale(1,1) translateY(0)}
+  74%{transform:scale(1.06,.92) translateY(2px)}
+  80%{transform:scale(.96,1.04) translateY(-3px)}
+  86%{transform:scale(1.02,.98) translateY(0)}
+  92%{transform:scale(1,1) translateY(0)}
+}
+.nm-animating.nm-motion-boulder .nm-life{animation:nm-motion-boulder-anim var(--nm-dur,7s) ease-in-out var(--nm-delay,0s) infinite}
+@keyframes nm-motion-boulder-anim{
+  0%,65%,100%{transform:rotate(0deg)}
+  72%{transform:rotate(-3.5deg) translateY(-1px)}
+  82%{transform:rotate(2.5deg) translateY(0)}
+  90%{transform:rotate(0deg)}
+}
+.nm-animating.nm-motion-cloud .nm-life{animation:nm-motion-cloud-anim var(--nm-dur,6.5s) ease-in-out var(--nm-delay,0s) infinite}
+@keyframes nm-motion-cloud-anim{
+  0%,55%,100%{transform:translateY(0)}
+  68%{transform:translateY(-7px) scale(1.02,.98)}
+  82%{transform:translateY(1.5px) scale(.99,1.01)}
+  92%{transform:translateY(0) scale(1,1)}
+}
+.nm-animating.nm-motion-ribbon .nm-life{animation:nm-motion-ribbon-anim var(--nm-dur,6.2s) ease-in-out var(--nm-delay,0s) infinite}
+@keyframes nm-motion-ribbon-anim{
+  0%,66%,100%{transform:scale(1,1) skewX(0deg)}
+  73%{transform:scale(.95,1.07) skewX(2.5deg) translateY(-2px)}
+  81%{transform:scale(1.03,.96) skewX(-1.5deg) translateY(1px)}
+  88%{transform:scale(.99,1.01) skewX(.5deg)}
+  94%{transform:scale(1,1) skewX(0deg) translateY(0)}
+}
+.nm-animating.nm-motion-spark .nm-life,
+.nm-animating.nm-motion-sprout .nm-life,
+.nm-animating.nm-motion-cluster .nm-life,
+.nm-animating.nm-motion-vessel .nm-life{animation:nm-motion-spark-anim var(--nm-dur,5.8s) ease-in-out var(--nm-delay,0s) infinite}
+@keyframes nm-motion-spark-anim{
+  0%,72%,100%{transform:scale(1) translateY(0)}
+  77%{transform:scale(1.08,.92) translateY(1px)}
+  83%{transform:scale(.96,1.06) translateY(-5px)}
+  89%{transform:scale(1.02,.98) translateY(1px)}
+  94%{transform:scale(1) translateY(0)}
+}
+.nm-paused .nm-life,
+body.stop-motion .nm-life,
+body.tab-hidden .nm-life{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){
+  .nm-life{animation:none!important}
+}
+.verdict-visual-wrap{display:flex;flex-direction:column;align-items:center;margin:8px auto 14px;max-width:240px}
+.verdict-visual-wrap .nm-visual{max-width:200px;cursor:pointer}
+.visual-origin-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#4a5c4e;background:#eef3e5;border:1px solid #d2ded1;padding:3px 10px;border-radius:999px;margin-top:6px}
+.discovery-card .nm-visual{max-width:140px;margin:4px auto 8px;cursor:pointer}
+
+.motion-toggle-button[aria-pressed="true"]{background:#e2dfcf;color:#726f63}
+
+
+
+/* Sketch motion must not inherit the older referee mascot animation. */
+.verdict-visual-wrap > .nm-visual{width:100%;height:auto;animation:none!important;transform:none!important}
+.discovery-card .nm-visual{width:100%;height:auto;aspect-ratio:8/7}
+.discovery-card .visual-origin-note,.discovery-card .discovery-decision{display:block;margin-top:3px;font-size:9px}
+.nm-visual.nm-animating:not(.nm-paused) .nm-life{will-change:transform}
+.nm-visual.nm-paused .nm-life,body.tab-hidden .nm-visual .nm-life{animation-play-state:paused!important;will-change:auto}
+body.stop-motion .nm-visual .nm-life{animation:none!important;transition:none!important;transform:none!important;will-change:auto}
+@media(prefers-reduced-motion:reduce){.nm-visual .nm-life{animation:none!important;transition:none!important;transform:none!important;will-change:auto}}
+@media(max-width:380px){
+ .site-header .brand-creature{width:29px;height:36px}.site-header .brand{gap:4px}
+ .site-header .brand-jp{font-size:12px}.site-header .brand-en{font-size:8px;letter-spacing:1px}
+ .header-nav{gap:5px}.header-nav .icon-button{width:28px;height:30px}.header-nav .notebook-button{height:30px;padding:0 7px;gap:4px}
+}
